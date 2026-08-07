@@ -1,0 +1,22 @@
+{
+  "name": "interview-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "InterviewOS - Monorepo for Chrome Extension & AI Interview Backend",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "dev:backend": "cd backend && .\\.venv\\Scripts\\uvicorn app.main:app --reload --port 8000",
+    "build": "npm run build:frontend"
+  },
+  "keywords": [
+    "ai",
+    "interview",
+    "chrome-extension",
+    "fastapi",
+    "react",
+    "vite"
+  ],
+  "author": "InterviewOS Team",
+  "license": "MIT"
+}
