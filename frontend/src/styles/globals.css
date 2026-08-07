@@ -1,0 +1,101 @@
+@import './components.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0b0c10;
+    --bg-card: #161822;
+    --border-color: #232636;
+    --brand-purple: #5b46f6;
+  }
+
+  html, body {
+    background-color: #0b0c10;
+    font-family: 'Inter', sans-serif;
+    color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Target UI Cards & Surfaces */
+.target-card {
+  background-color: #161822;
+  border: 1px solid #232636;
+  border-radius: 16px;
+}
+
+.target-card-interactive {
+  background-color: #161822;
+  border: 1px solid #232636;
+  border-radius: 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.target-card-interactive:hover {
+  border-color: rgba(91, 70, 246, 0.5);
+  background-color: #1c1f2e;
+}
+
+.target-btn-primary {
+  background: linear-gradient(135deg, #5b46f6 0%, #7c3aed 100%);
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 10px 20px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(91, 70, 246, 0.3);
+}
+
+.target-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(91, 70, 246, 0.4);
+}
+
+.target-badge-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.target-badge-inprogress {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.target-badge-purple {
+  background: rgba(91, 70, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(91, 70, 246, 0.3);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #232636;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5b46f6;
+}

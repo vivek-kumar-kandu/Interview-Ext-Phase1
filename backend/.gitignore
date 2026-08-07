@@ -1,0 +1,20 @@
+# Python virtualenv
+.venv/
+venv/
+ENV/
+env/
+Interview/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
