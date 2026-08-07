@@ -13,12 +13,26 @@ class JobAnalyzerService:
         company = job.company or "Target Company"
         role = job.jobTitle or "AI Software Engineer"
         
-        detected_skills = job.skills if job.skills else ["Python", "FastAPI", "LangGraph", "RAG", "Docker", "Redis"]
+        if job.skills and len(job.skills) > 0:
+            detected_skills = job.skills
+        else:
+            # Extract skills dynamically from description text or role title
+            extracted = []
+            text_to_search = f"{role} {job.description or ''}".lower()
+            known_techs = [
+                "FastAPI", "Python", "Docker", "Redis", "LangGraph", "RAG", "React", "TypeScript",
+                "Kubernetes", "PostgreSQL", "MongoDB", "PyTorch", "TensorFlow", "AWS", "GCP", "Azure",
+                "LangChain", "Vector DB", "Qdrant", "Microservices", "REST API", "GraphQL"
+            ]
+            for tech in known_techs:
+                if tech.lower() in text_to_search and tech not in extracted:
+                    extracted.append(tech)
+            detected_skills = extracted if extracted else ["Python", "FastAPI", "LangGraph", "RAG", "Docker", "Redis"]
 
         # Determine difficulty based on role title or experience
         exp_str = (job.experience or "").lower()
         title_str = role.lower()
-        if "senior" in title_str or "lead" in title_str or "5+" in exp_str:
+        if "senior" in title_str or "lead" in title_str or "5+" in exp_str or "principal" in title_str:
             difficulty = "Hard"
         elif "junior" in title_str or "intern" in title_str:
             difficulty = "Medium"
@@ -30,7 +44,8 @@ class JobAnalyzerService:
             role=role,
             detectedSkills=detected_skills,
             estimatedDuration="15 Minutes",
-            difficulty=difficulty
+            difficulty=difficulty,
+            requiredSkills=detected_skills
         )
 
     def map_skills_to_curriculum_days(self, skills: List[str]) -> List[int]:

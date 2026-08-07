@@ -56,13 +56,36 @@ class InterviewOrchestrator:
         )
 
     def _compute_skill_analysis(self, session: SessionState):
-        req_skills = session.job.skills if session.job and session.job.skills else ["FastAPI", "Docker", "LangGraph", "Redis"]
-        cand_skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"]
+        if session.job and session.job.skills and len(session.job.skills) > 0:
+            req_skills = session.job.skills
+        elif session.job_summary and session.job_summary.detectedSkills:
+            req_skills = session.job_summary.detectedSkills
+        else:
+            req_skills = ["FastAPI", "Docker", "LangGraph", "Redis"]
+
+        if session.candidate:
+            cand_skills = candidate_analyzer.extract_candidate_skills(session.candidate)
+        else:
+            cand_skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"]
+
         missing_skills = [s for s in req_skills if s not in cand_skills]
         if not missing_skills and len(req_skills) > 2:
             missing_skills = [req_skills[-1]]
 
-        return req_skills, cand_skills, missing_skills
+        # Calculate dynamic match score based on skill alignment ratio
+        total_req = len(req_skills)
+        matched_count = total_req - len([s for s in req_skills if s in missing_skills])
+        raw_match = int((matched_count / max(total_req, 1)) * 100)
+        match_score = min(98, max(65, raw_match))
+
+        # Calculate dynamic readiness score based on cumulative turn evaluation scores
+        if session.evaluations:
+            avg_eval = sum(ev.score for ev in session.evaluations) / len(session.evaluations)
+            readiness_score = min(98, max(50, int(avg_eval * 10)))
+        else:
+            readiness_score = min(96, max(60, int(match_score * 0.95)))
+
+        return req_skills, cand_skills, missing_skills, match_score, readiness_score
 
     async def process_turn(self, request: InterviewRequest) -> InterviewResponse:
         session_id = request.sessionId
@@ -126,7 +149,7 @@ class InterviewOrchestrator:
             candidate_name = session.candidate.member.name if session.candidate else "Candidate"
             company = session.job_summary.company
             role = session.job_summary.role
-            req_skills, cand_skills, missing_skills = self._compute_skill_analysis(session)
+            req_skills, cand_skills, missing_skills, match_score, readiness_score = self._compute_skill_analysis(session)
 
             first_day_info = curriculum_service.get_day_info(first_day)
             day_title = first_day_info.get("title", "Technical Architecture") if first_day_info else "Technical Architecture"
@@ -146,8 +169,8 @@ class InterviewOrchestrator:
                 reply=welcome_msg,
                 done=False,
                 whyAsked=why_asked,
-                matchScore=92,
-                readinessScore=88,
+                matchScore=match_score,
+                readinessScore=readiness_score,
                 requiredSkills=req_skills,
                 candidateSkills=cand_skills,
                 missingSkills=missing_skills,
@@ -171,7 +194,7 @@ class InterviewOrchestrator:
             )
             session.evaluations.append(evaluation)
 
-        req_skills, cand_skills, missing_skills = self._compute_skill_analysis(session)
+        req_skills, cand_skills, missing_skills, match_score, readiness_score = self._compute_skill_analysis(session)
 
         # Check completion criteria (8 questions & 4 distinct days)
         distinct_days_count = len(set(session.days_covered))
@@ -249,8 +272,8 @@ class InterviewOrchestrator:
             reply=f"Question {next_turn_index}: {next_question}",
             done=False,
             whyAsked=why_asked,
-            matchScore=92,
-            readinessScore=88,
+            matchScore=match_score,
+            readinessScore=readiness_score,
             requiredSkills=req_skills,
             candidateSkills=cand_skills,
             missingSkills=missing_skills,

@@ -51,5 +51,32 @@ class CandidateAnalyzer:
 
         return selected[:max(target_count, 4)]
 
+    def extract_candidate_skills(self, candidate: CandidateProfile) -> List[str]:
+        """
+        Extracts candidate's demonstrated skill set from member role and completed curriculum missions.
+        """
+        skills = []
+        if candidate and candidate.member:
+            role = (candidate.member.jobRole or "").lower()
+            if "ai" in role or "ml" in role or "python" in role:
+                skills.extend(["Python", "FastAPI", "LangGraph"])
+            elif "frontend" in role or "fullstack" in role:
+                skills.extend(["React", "TypeScript", "JavaScript"])
+
+        if candidate and candidate.missions:
+            for m in candidate.missions:
+                if m.passed:
+                    info = curriculum_service.get_day_info(m.day)
+                    if info and "tools" in info:
+                        for tool in info["tools"]:
+                            if tool not in skills:
+                                skills.append(tool)
+
+        if not skills:
+            skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"]
+
+        return list(dict.fromkeys(skills))
+
 
 candidate_analyzer = CandidateAnalyzer()
+
