@@ -1,6 +1,12 @@
 import os
 from pathlib import Path
 from dataclasses import dataclass, field
+from dotenv import load_dotenv
+
+# Automatically load backend/.env into environment
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
 
 
 @dataclass
@@ -9,9 +15,15 @@ class Settings:
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
 
+    # Gemini API Settings
+    GEMINI_API_KEY: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", "")))
+    GEMINI_MODEL: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+
+
     # OpenAI Settings
     OPENAI_API_KEY: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     OPENAI_MODEL: str = field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+
 
     # Qdrant Settings
     QDRANT_URL: str = field(default_factory=lambda: os.getenv("QDRANT_URL", ":memory:"))

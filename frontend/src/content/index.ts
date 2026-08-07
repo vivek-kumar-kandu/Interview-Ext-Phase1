@@ -14,39 +14,79 @@ interface ExtractedJobContext {
 }
 
 /**
- * Parses current webpage DOM to extract job posting details
+ * Robust JSON-LD Schema.org JobPosting Extractor
+ */
+function extractJsonLdJobPosting(): { jobTitle?: string; company?: string; description?: string } | null {
+  try {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of Array.from(scripts)) {
+      if (!script.textContent) continue;
+      const json = JSON.parse(script.textContent);
+      const items = Array.isArray(json) ? json : [json];
+      for (const item of items) {
+        if (item['@type'] === 'JobPosting' || item['@type'] === 'http://schema.org/JobPosting') {
+          return {
+            jobTitle: item.title,
+            company: item.hiringOrganization?.name || item.hiringOrganization?.legalName,
+            description: item.description ? item.description.replace(/<[^>]*>?/gm, '') : undefined,
+          };
+        }
+      }
+    }
+  } catch {
+    // Fail silently on invalid JSON-LD
+  }
+  return null;
+}
+
+/**
+ * Multi-tier robust job context extractor with JSON-LD, OpenGraph meta-tags, and DOM selectors
  */
 function extractPageJobDetails(): ExtractedJobContext | null {
   const url = window.location.href;
   const domain = window.location.hostname;
 
-  let jobTitle = '';
-  let company = '';
-  let description = '';
+  // Tier 1: Try JSON-LD Standard Schema.org JobPosting
+  const jsonLdData = extractJsonLdJobPosting();
+  let jobTitle = jsonLdData?.jobTitle || '';
+  let company = jsonLdData?.company || '';
+  let description = jsonLdData?.description || '';
 
-  // 1. LinkedIn Jobs DOM Selectors
-  if (domain.includes('linkedin.com')) {
-    jobTitle =
-      document.querySelector('.job-details-jobs-unified-top-card__job-title')?.textContent?.trim() ||
-      document.querySelector('h1')?.textContent?.trim() ||
-      '';
+  // Tier 2: Specialized DOM Selectors (LinkedIn, Greenhouse, Lever, Workday, Indeed)
+  if (!jobTitle) {
+    if (domain.includes('linkedin.com')) {
+      jobTitle =
+        document.querySelector('.job-details-jobs-unified-top-card__job-title')?.textContent?.trim() ||
+        document.querySelector('.jobs-unified-top-card__job-title')?.textContent?.trim() ||
+        document.querySelector('h1.t-24')?.textContent?.trim() ||
+        document.querySelector('h1')?.textContent?.trim() ||
+        '';
 
-    company =
-      document.querySelector('.job-details-jobs-unified-top-card__company-name')?.textContent?.trim() ||
-      document.querySelector('.jobs-unified-top-card__company-name')?.textContent?.trim() ||
-      '';
+      company =
+        document.querySelector('.job-details-jobs-unified-top-card__company-name')?.textContent?.trim() ||
+        document.querySelector('.jobs-unified-top-card__company-name')?.textContent?.trim() ||
+        document.querySelector('a.topcard__org-name-link')?.textContent?.trim() ||
+        '';
 
-    description =
-      document.querySelector('#job-details')?.textContent?.trim() ||
-      document.querySelector('.jobs-description__content')?.textContent?.trim() ||
-      '';
-  }
-  // 2. Generic Hiring Portals Fallback (Greenhouse, Workday, Indeed, Lever)
-  else {
-    jobTitle = document.querySelector('h1')?.textContent?.trim() || document.title || '';
-    const metaCompany = document.querySelector('meta[property="og:site_name"]')?.getAttribute('content');
-    company = metaCompany || domain.replace('www.', '').split('.')[0];
-    description = document.body.innerText.substring(0, 2000);
+      description =
+        document.querySelector('#job-details')?.textContent?.trim() ||
+        document.querySelector('.jobs-description__content')?.textContent?.trim() ||
+        '';
+    } else {
+      jobTitle =
+        document.querySelector('h1.app-title')?.textContent?.trim() ||
+        document.querySelector('.job-title')?.textContent?.trim() ||
+        document.querySelector('h1')?.textContent?.trim() ||
+        document.title ||
+        '';
+
+      const metaCompany =
+        document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') ||
+        document.querySelector('meta[name="author"]')?.getAttribute('content');
+
+      company = metaCompany || domain.replace('www.', '').split('.')[0];
+      description = document.body.innerText.substring(0, 2000);
+    }
   }
 
   if (!jobTitle) return null;

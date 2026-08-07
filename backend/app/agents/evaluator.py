@@ -3,6 +3,7 @@ from typing import Dict, Any
 from app.config import settings
 from app.models.session import TurnEvaluation
 from app.services.curriculum_service import curriculum_service
+from app.utils.llm import get_llm
 
 
 class EvaluatorEngine:
@@ -18,17 +19,11 @@ class EvaluatorEngine:
         day_info = curriculum_service.get_day_info(day)
         day_title = day_info.get("title", f"Day {day}") if day_info else f"Day {day}"
 
-        if settings.OPENAI_API_KEY:
+        llm = get_llm(temperature=0.2)
+        if llm:
             try:
-                from langchain_openai import ChatOpenAI
                 from langchain_core.messages import SystemMessage, HumanMessage
                 from app.agents.prompts import SYSTEM_EVALUATOR_PROMPT
-
-                llm = ChatOpenAI(
-                    model=settings.OPENAI_MODEL,
-                    api_key=settings.OPENAI_API_KEY,
-                    temperature=0.2
-                )
 
                 sys_prompt = SYSTEM_EVALUATOR_PROMPT.format(
                     question=question,

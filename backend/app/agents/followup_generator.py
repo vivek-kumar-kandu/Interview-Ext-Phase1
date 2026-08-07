@@ -1,5 +1,6 @@
 from typing import Optional
 from app.config import settings
+from app.utils.llm import get_llm
 
 
 class FollowupGenerator:
@@ -7,16 +8,10 @@ class FollowupGenerator:
     Generates adaptive follow-up questions when a candidate's answer requires elaboration or clarification.
     """
     async def generate_followup(self, question: str, answer: str, day: int) -> str:
-        if settings.OPENAI_API_KEY:
+        llm = get_llm(temperature=0.7)
+        if llm:
             try:
-                from langchain_openai import ChatOpenAI
-                from langchain_core.messages import SystemMessage, HumanMessage
-
-                llm = ChatOpenAI(
-                    model=settings.OPENAI_MODEL,
-                    api_key=settings.OPENAI_API_KEY,
-                    temperature=0.7
-                )
+                from langchain_core.messages import HumanMessage
 
                 prompt = (
                     f"You are a technical interviewer following up on a candidate's answer.\n"
@@ -29,6 +24,7 @@ class FollowupGenerator:
                 return response.content.strip()
             except Exception:
                 pass
+
 
         return f"That's an interesting point regarding your approach. Could you elaborate on how you handle edge cases or performance optimization in that scenario?"
 

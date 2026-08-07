@@ -1,8 +1,10 @@
 from typing import Optional
 from app.config import settings
+from app.utils.llm import get_llm
 from app.rag.retriever import curriculum_retriever
 from app.services.curriculum_service import curriculum_service
 from app.schemas.interview import CandidateProfile, JobDetails
+
 
 
 class QuestionGenerator:
@@ -24,16 +26,10 @@ class QuestionGenerator:
         job_title = job.jobTitle if job and job.jobTitle else "AI Engineer"
         required_skills = ", ".join(job.skills) if job and job.skills else "FastAPI, LangGraph, RAG, Docker"
 
-        if settings.OPENAI_API_KEY:
+        llm = get_llm(temperature=0.7)
+        if llm:
             try:
-                from langchain_openai import ChatOpenAI
-                from langchain_core.messages import SystemMessage, HumanMessage
-
-                llm = ChatOpenAI(
-                    model=settings.OPENAI_MODEL,
-                    api_key=settings.OPENAI_API_KEY,
-                    temperature=0.7
-                )
+                from langchain_core.messages import HumanMessage
 
                 job_role = candidate.member.jobRole if candidate else job_title
                 years_exp = candidate.member.yearsExperience if candidate else 3
@@ -51,6 +47,7 @@ class QuestionGenerator:
                 return response.content.strip()
             except Exception:
                 pass
+
 
         # Deterministic fallback question incorporating job posting details
         tools = ", ".join(day_info.get("tools", ["core tools"])) if day_info else required_skills

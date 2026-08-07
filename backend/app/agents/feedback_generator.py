@@ -5,6 +5,9 @@ from app.models.session import SessionState
 from app.schemas.interview import FeedbackSchema
 
 
+from app.utils.llm import get_llm
+
+
 class FeedbackGenerator:
     """
     Synthesizes overall interview performance into an executive feedback report containing:
@@ -53,16 +56,11 @@ class FeedbackGenerator:
             f"Recommendation: {recommendation}. Top Strength: {unique_strengths[0] if unique_strengths else 'System Architecture'}."
         )
 
-        if settings.OPENAI_API_KEY:
+        llm = get_llm(temperature=0.3)
+        if llm:
             try:
-                from langchain_openai import ChatOpenAI
-                from langchain_core.messages import SystemMessage, HumanMessage
+                from langchain_core.messages import HumanMessage
 
-                llm = ChatOpenAI(
-                    model=settings.OPENAI_MODEL,
-                    api_key=settings.OPENAI_API_KEY,
-                    temperature=0.3
-                )
 
                 eval_summary_lines = [
                     f"- Topic: {ev.topic} (Day {ev.day}), Score: {ev.score}/10, Feedback: {ev.feedback}"
