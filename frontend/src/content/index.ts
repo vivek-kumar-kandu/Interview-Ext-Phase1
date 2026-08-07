@@ -1,9 +1,20 @@
-import { logger } from '../core/logger';
-import { registerContentListener } from '../messaging/content';
-import { MESSAGES } from '../core/constants';
-import { API_CONFIG } from '../config/api';
+/**
+ * InterviewOS Content Script (Standalone Manifest V3 IIFE Target)
+ * Self-contained DOM extractor for hiring portals with zero external module imports.
+ */
 
-logger.info('InterviewOS Content Script injected on page:', window.location.href);
+const API_BASE_URL = 'http://localhost:8000';
+const LOG_PREFIX = '[InterviewOS Content Script]';
+
+function logInfo(...args: unknown[]) {
+  console.log(LOG_PREFIX, ...args);
+}
+
+function logError(...args: unknown[]) {
+  console.error(LOG_PREFIX, ...args);
+}
+
+logInfo('Injected on page:', window.location.href);
 
 interface ExtractedJobContext {
   url: string;
@@ -108,8 +119,8 @@ async function analyzePageJob() {
   if (!extracted) return;
 
   try {
-    logger.info('Extracted Job Posting Context:', extracted);
-    const response = await fetch(`${API_CONFIG.baseUrl}/api/extension/detect-job`, {
+    logInfo('Extracted Job Posting Context:', extracted);
+    const response = await fetch(`${API_BASE_URL}/api/extension/detect-job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -123,21 +134,23 @@ async function analyzePageJob() {
 
     if (response.ok) {
       const data = await response.json();
-      logger.info('Backend Job Detection Result:', data);
+      logInfo('Backend Job Detection Result:', data);
     }
   } catch (error) {
-    logger.error('Failed to execute job detection API:', error);
+    logError('Failed to execute job detection API:', error);
   }
 }
 
 // Execute job detection shortly after page load settles
 setTimeout(analyzePageJob, 1500);
 
-// Content script messaging listener
-registerContentListener((message, sendResponse) => {
-  if (message.type === MESSAGES.TOGGLE_FLOATING_WIDGET) {
-    logger.info('Toggling floating widget injection');
-    sendResponse({ success: true });
-  }
-  return true;
-});
+// Content script Chrome runtime message listener
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message && message.type === 'TOGGLE_FLOATING_WIDGET') {
+      logInfo('Toggling floating widget injection');
+      sendResponse({ success: true });
+    }
+    return true;
+  });
+}

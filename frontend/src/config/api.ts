@@ -2,7 +2,7 @@ import { env } from '../core/env';
 
 export const API_CONFIG = {
   baseUrl: env.apiBaseUrl,
-  timeout: 15000,
+  timeout: 30000,
   endpoints: {
     health: '/health',
     interviewStart: '/api/interview/start',
