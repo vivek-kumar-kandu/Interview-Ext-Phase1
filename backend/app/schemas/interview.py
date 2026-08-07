@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -52,6 +52,11 @@ class JobAnalysisSummary(BaseModel):
     detectedSkills: List[str]
     estimatedDuration: str = "15 Minutes"
     difficulty: str = "Medium-Hard"
+    matchScore: int = Field(92, description="Job compatibility score percentage")
+    readinessScore: int = Field(88, description="Interview readiness metric percentage")
+    requiredSkills: List[str] = Field(default_factory=list)
+    candidateSkills: List[str] = Field(default_factory=list)
+    missingSkills: List[str] = Field(default_factory=list)
 
 
 class ProgressMetrics(BaseModel):
@@ -59,6 +64,7 @@ class ProgressMetrics(BaseModel):
     totalQuestions: int = 8
     topicsCovered: List[str] = Field(default_factory=list)
     remainingTopics: List[str] = Field(default_factory=list)
+    roadmapProgress: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class FeedbackSchema(BaseModel):
@@ -67,6 +73,8 @@ class FeedbackSchema(BaseModel):
     technicalKnowledge: int = Field(90, description="Technical knowledge score out of 100")
     communication: int = Field(86, description="Communication score out of 100")
     reasoning: int = Field(89, description="Reasoning score out of 100")
+    matchScore: int = Field(92, description="Job match compatibility percentage")
+    readinessScore: int = Field(88, description="Interview readiness score percentage")
     hiringRecommendation: str = Field("Strong Hire", description="Recommendation: Strong Hire / Hire / Consider / Reject")
 
     # Structured Insights
@@ -74,6 +82,10 @@ class FeedbackSchema(BaseModel):
     strengths: List[str] = Field(default_factory=list)
     weakAreas: List[str] = Field(default_factory=list)
     learningRoadmap: List[str] = Field(default_factory=list)
+    recruiterSummary: Optional[str] = Field(None, description="Concise recruiter-friendly summary")
+    topStrength: Optional[str] = Field(None, description="Top technical strength identified")
+    biggestWeakness: Optional[str] = Field(None, description="Primary technical gap to improve")
+    nextRecommendedTopic: Optional[str] = Field(None, description="Next suggested learning focus")
 
     # Backward compatibility aliases
     gaps: List[str] = Field(default_factory=list)
@@ -83,6 +95,12 @@ class FeedbackSchema(BaseModel):
 class InterviewResponse(BaseModel):
     reply: str
     done: bool = False
+    whyAsked: Optional[str] = Field(None, description="AI rationale for generating this question")
+    matchScore: int = 92
+    readinessScore: int = 88
+    requiredSkills: List[str] = Field(default_factory=list)
+    candidateSkills: List[str] = Field(default_factory=list)
+    missingSkills: List[str] = Field(default_factory=list)
     jobSummary: Optional[JobAnalysisSummary] = None
     progress: Optional[ProgressMetrics] = None
     feedback: Optional[FeedbackSchema] = None

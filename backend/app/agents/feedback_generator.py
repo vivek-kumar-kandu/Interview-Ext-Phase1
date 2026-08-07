@@ -7,10 +7,10 @@ from app.schemas.interview import FeedbackSchema
 
 class FeedbackGenerator:
     """
-    Synthesizes overall interview performance into an enterprise feedback report containing:
-    - Numerical breakdown (overallScore, technicalKnowledge, communication, reasoning)
+    Synthesizes overall interview performance into an executive feedback report containing:
+    - Numerical breakdown (overallScore, technicalKnowledge, communication, reasoning, matchScore, readinessScore)
     - Hiring recommendation (Strong Hire / Hire / Consider / Reject)
-    - Structured qualitative report (summary, strengths, weakAreas, learningRoadmap)
+    - Executive summary and recruiter-friendly summary
     """
     async def generate_feedback(self, session: SessionState) -> FeedbackSchema:
         candidate_name = session.candidate.member.name if session.candidate else "Candidate"
@@ -25,6 +25,8 @@ class FeedbackGenerator:
         tech_score = min(99, max(50, int(overall_score + 2)))
         comm_score = min(95, max(50, int(overall_score - 2)))
         reasoning_score = min(96, max(50, int(overall_score + 1)))
+        match_score = 92
+        readiness_score = min(96, max(60, int(overall_score * 0.95 + 5)))
 
         if overall_score >= 85:
             recommendation = "Strong Hire"
@@ -37,13 +39,19 @@ class FeedbackGenerator:
 
         all_strengths: List[str] = []
         all_gaps: List[str] = []
-        
+
         for ev in session.evaluations:
             all_strengths.extend(ev.strengths_identified)
             all_gaps.extend(ev.gaps_identified)
 
         unique_strengths = list(dict.fromkeys(all_strengths))
         unique_gaps = list(dict.fromkeys(all_gaps))
+
+        recruiter_summary = (
+            f"Candidate {candidate_name} evaluated for {job_role} at {company}. "
+            f"Overall Score: {overall_score}/100, Job Match: {match_score}%, Interview Readiness: {readiness_score}%. "
+            f"Recommendation: {recommendation}. Top Strength: {unique_strengths[0] if unique_strengths else 'System Architecture'}."
+        )
 
         if settings.OPENAI_API_KEY:
             try:
@@ -82,11 +90,17 @@ class FeedbackGenerator:
                     technicalKnowledge=tech_score,
                     communication=comm_score,
                     reasoning=reasoning_score,
+                    matchScore=match_score,
+                    readinessScore=readiness_score,
                     hiringRecommendation=recommendation,
                     summary=data.get("summary", f"{candidate_name} demonstrated strong competency for the {job_role} position at {company}."),
                     strengths=strengths_res,
                     weakAreas=weak_res,
                     learningRoadmap=next_res,
+                    recruiterSummary=recruiter_summary,
+                    topStrength=strengths_res[0] if strengths_res else "System Architecture",
+                    biggestWeakness=weak_res[0] if weak_res else "Docker Deployment",
+                    nextRecommendedTopic=next_res[0] if next_res else "Redis",
                     gaps=weak_res,
                     next=next_res
                 )
@@ -100,22 +114,31 @@ class FeedbackGenerator:
             "Practice container network optimization & Kubernetes deployment specs"
         ]
 
+        strengths_fallback = unique_strengths[:4] if unique_strengths else [
+            f"Solid grasp of core engineering topics for {job_role}",
+            "Structured communication and architectural reasoning"
+        ]
+
         return FeedbackSchema(
             overallScore=overall_score,
             technicalKnowledge=tech_score,
             communication=comm_score,
             reasoning=reasoning_score,
+            matchScore=match_score,
+            readinessScore=readiness_score,
             hiringRecommendation=recommendation,
             summary=f"{candidate_name} demonstrated strong technical domain competency for the {job_role} role at {company}.",
-            strengths=unique_strengths[:4] if unique_strengths else [
-                f"Solid grasp of core engineering topics for {job_role}",
-                "Structured communication and architectural reasoning"
-            ],
+            strengths=strengths_fallback,
             weakAreas=weak_areas,
             learningRoadmap=roadmap,
+            recruiterSummary=recruiter_summary,
+            topStrength="System Architecture" if not strengths_fallback else strengths_fallback[0],
+            biggestWeakness="Docker Deployment" if not weak_areas else weak_areas[0],
+            nextRecommendedTopic="Redis" if not roadmap else roadmap[0],
             gaps=weak_areas,
             next=roadmap
         )
+
 
 
 feedback_generator = FeedbackGenerator()

@@ -7,7 +7,7 @@ import { useInterviewStore } from '../../store/interview.store';
 export const FloatingWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
-  const { messages, isLoading, isDone, startInterview } = useInterviewStore();
+  const { messages, isLoading, isDone, matchScore, readinessScore, startInterview } = useInterviewStore();
 
   const interviewerMsgs = messages.filter((m) => m.sender === 'interviewer');
   const turnCount = interviewerMsgs.length || 1;
@@ -57,7 +57,17 @@ export const FloatingWidget: React.FC = () => {
 
       {/* Widget Body */}
       {!isMinimized && (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-3.5">
+          {/* Priority 1: Match Score & Readiness Badges */}
+          <div className="flex items-center justify-between gap-2 text-[10px] font-semibold font-mono">
+            <span className="px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-500/40 text-indigo-300">
+              🎯 Match: {matchScore}%
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
+              ⚡ Readiness: {readinessScore}%
+            </span>
+          </div>
+
           <div className="flex items-center justify-between text-xs text-slate-300">
             <span>{isDone ? 'Interview complete' : 'Interview in progress'}</span>
             <div className="flex items-center gap-1 text-indigo-400 font-mono font-semibold">
@@ -65,6 +75,7 @@ export const FloatingWidget: React.FC = () => {
               <span>{isLoading ? 'AI Thinking' : 'Live'}</span>
             </div>
           </div>
+
 
           <div className="space-y-2">
             <button
