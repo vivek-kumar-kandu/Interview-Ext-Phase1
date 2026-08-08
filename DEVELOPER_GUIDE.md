@@ -31,6 +31,7 @@ Welcome to **InterviewOS**! This handbook is specifically crafted for developers
 ## 🛠️ 2. Technology Stack
 
 ### Backend Stack (`/backend`)
+
 - **Framework**: Python 3.13 + FastAPI + Pydantic v2 ([main.py](file:///d:/Ai%20Interview%20Ext/backend/app/main.py))
 - **LLM Orchestration**: Google Gemini 1.5 Flash (`langchain-google-genai`) with OpenAI (`gpt-4o-mini`) fallback support via unified factory [`get_llm()`](file:///d:/Ai%20Interview%20Ext/backend/app/utils/llm.py#L8-L40).
 - **RAG & Vector Search**: Qdrant (`:memory:` vector store) with JSON curriculum embeddings in [`CurriculumRetriever`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L6-L62).
@@ -49,7 +50,7 @@ Welcome to **InterviewOS**! This handbook is specifically crafted for developers
 
 ## 📁 3. Repository Directory Structure
 
-```
+```text
 d:\Ai Interview Ext\
 ├── DEVELOPER_GUIDE.md               <-- Complete Developer Architecture & Onboarding Manual
 ├── package.json                     <-- Monorepo script runner
@@ -166,6 +167,7 @@ sequenceDiagram
 2. **`POST /api/extension/detect-job`** ([extension.py#L24-L37](file:///d:/Ai%20Interview%20Ext/backend/app/api/v1/endpoints/extension.py#L24-L37)):
    - **Purpose**: Accepts extracted page metadata and determines whether it represents an active job posting.
    - **Request Payload**:
+
      ```json
      {
        "url": "https://www.linkedin.com/jobs/view/123456",
@@ -175,11 +177,13 @@ sequenceDiagram
        "rawDescription": "We are looking for..."
      }
      ```
+
    - **Response Payload**: Returns `JobDetectionResponse` containing `isJobProfile`, parsed `JobAnalysisSummary`, and prompt trigger for extension UI.
 
 3. **`POST /api/interview`** ([interview.py#L8-L21](file:///d:/Ai%20Interview%20Ext/backend/app/api/v1/endpoints/interview.py#L8-L21)):
    - **Purpose**: Primary stateful endpoint for interview initialization and turn processing.
    - **Session Initialization Payload**:
+
      ```json
      {
        "sessionId": "session_1723000000",
@@ -187,7 +191,9 @@ sequenceDiagram
        "job": { "jobTitle": "AI Engineer", "company": "OpenAI", "skills": ["FastAPI", "Docker", "LangGraph", "Redis"] }
      }
      ```
+
    - **Conversation Turn Response Payload**:
+
      ```json
      {
        "sessionId": "session_1723000000",
@@ -195,6 +201,7 @@ sequenceDiagram
      }
      ```
    - **Response Payload (`InterviewResponse`)**:
+
      - `reply`: Interviewer response/question text.
      - `done`: Boolean flag indicating interview completion.
      - `whyAsked`: Multi-bullet explainability string explaining LLM reasoning.
@@ -235,7 +242,9 @@ sequenceDiagram
 ## 💾 6. Session Storage & Database Architecture
 
 ### 6.1 Data Models (`SessionState`)
+
 Defined in [`app/models/session.py`](file:///d:/Ai%20Interview%20Ext/backend/app/models/session.py#L22-L35):
+
 - `session_id`: Unique string identifying the active candidate interview session.
 - `candidate`: `CandidateProfile` object containing member info, past missions, and skill signals.
 - `job`: `JobDetails` object containing job title, company, skills, and raw description.
@@ -251,12 +260,16 @@ Defined in [`app/models/session.py`](file:///d:/Ai%20Interview%20Ext/backend/app
 - `feedback`: [`FeedbackSchema`](file:///d:/Ai%20Interview%20Ext/backend/app/schemas/interview.py#L38-L59) executive report object.
 
 ### 6.2 Dual-Tier Storage Layer (`SessionService`)
+
 Defined in [`app/services/session_service.py`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L10-L75):
+
 1. **Primary Redis Storage**: Connects using `redis.asyncio` via `REDIS_URL`. Serializes `SessionState` to JSON with 24-hour expiration (`setex(f"interview_session:{id}", 86400, json)`).
 2. **In-Memory Storage Fallback**: An in-memory dict `self._memory_sessions` acts as an automatic fail-safe fallback if Redis is offline or unreachable.
 
 ### 6.3 Curriculum Vector Storage & RAG (`CurriculumRetriever`)
+
 Defined in [`app/rag/retriever.py`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L6-L62):
+
 - Loads curriculum days from [`curriculum.json`](file:///d:/Ai%20Interview%20Ext/backend/app/data/curriculum.json).
 - Indexes title, day type, tech stack, and content chunks into memory.
 - Provides day-context retrieval ([`get_day_context()`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L33-L45)) and keyword similarity search ([`search_relevant_context()`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L47-L59)).
@@ -268,29 +281,36 @@ Defined in [`app/rag/retriever.py`](file:///d:/Ai%20Interview%20Ext/backend/app/
 As a developer working on this codebase, take note of the following active bugs and technical gotchas:
 
 ### 🐛 Bug 1: Hardcoded Candidate Skills in Orchestrator Skill Matrix
+
 - **Location**: [`app/agents/orchestrator.py#L58-L65`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L58-L65)
 - **Code Snippet**:
+
   ```python
   def _compute_skill_analysis(self, session: SessionState):
       req_skills = session.job.skills if session.job and session.job.skills else ["FastAPI", "Docker", "LangGraph", "Redis"]
       cand_skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"] # <-- HARDCODED
   ```
+
 - **Issue**: Candidate skills are hardcoded rather than extracted from `session.candidate.keySkills` or parsed resume signals.
 - **Impact**: The UI Skill Gap matrix always displays identical candidate skills regardless of who is interviewing.
 
 ### 🐛 Bug 2: Static Match & Readiness Scores in Intermediate Turn Responses
+
 - **Location**: [`app/agents/orchestrator.py#L149-L150`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L149-L150) and [`#L252-L253`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L252-L253)
 - **Issue**: Intermediate responses hardcode `matchScore=92` and `readinessScore=88` instead of recalculating scores dynamically based on `session.evaluations`.
 
 ### 🐛 Bug 3: In-Memory Session Isolation Across Multi-Worker Deployments
+
 - **Location**: [`app/services/session_service.py#L16`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L16)
 - **Issue**: If Redis is offline and Uvicorn runs with `--workers 4`, in-memory session dicts are process-isolated. Subsequent candidate turns routed to a different worker process result in `Session Not Found` errors.
 
 ### 🐛 Bug 4: DOM Parsing Fragility on Portals
+
 - **Location**: [`frontend/src/content/index.ts#L58-L75`](file:///d:/Ai%20Interview%20Ext/frontend/src/content/index.ts#L58-L75)
 - **Issue**: Specific class selectors like `.job-details-jobs-unified-top-card__job-title` break when LinkedIn or other job portals release frontend updates.
 
 ### 🐛 Bug 5: Vector Store Startup Re-indexing Overhead
+
 - **Location**: [`app/config/settings.py#L29`](file:///d:/Ai%20Interview%20Ext/backend/app/config/settings.py#L29)
 - **Issue**: Vector store relies on `:memory:`. Re-indexing happens on every application startup, introducing latency during app boot.
 
@@ -299,6 +319,7 @@ As a developer working on this codebase, take note of the following active bugs 
 ## 🚀 8. Architectural Suggestions & Feature Roadmap
 
 ### High Priority
+
 1. **Persistent Relational Database (SQLModel / PostgreSQL)**:
    - Replace transient session storage with SQLModel / PostgreSQL.
    - Store candidate profiles, session transcripts, turn evaluations, and aggregate skill gap analytics across time.
@@ -306,11 +327,13 @@ As a developer working on this codebase, take note of the following active bugs 
    - Fix hardcoded skill lists in `orchestrator.py` by integrating real NLP/semantic skill matching between candidate resume data and job posting text.
 
 ### Medium Priority
-3. **WebSockets / Server-Sent Events (SSE) Streaming**:
+
+1. **WebSockets / Server-Sent Events (SSE) Streaming**:
    - Refactor `POST /api/interview` to support `text/event-stream` (SSE). Stream generated LLM tokens word-by-word into the React SidePanel to eliminate response latency.
-4. **Persistent Qdrant Vector Cluster**:
+2. **Persistent Qdrant Vector Cluster**:
    - Deploy a standalone Qdrant instance via Docker Compose or Qdrant Cloud. Retain curriculum vectors permanently without relying on `:memory:` re-indexing on container restarts.
 
 ### Low Priority
-5. **Live Spoken Audio Pipeline**:
+
+1. **Live Spoken Audio Pipeline**:
    - Integrate Web Speech API or OpenAI Realtime Voice WebSockets to enable spoken technical interviews alongside text input.

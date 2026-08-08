@@ -26,6 +26,21 @@ class QuestionGenerator:
         job_title = job.jobTitle if job and job.jobTitle else "AI Engineer"
         required_skills = ", ".join(job.skills) if job and job.skills else "FastAPI, LangGraph, RAG, Docker"
 
+        # Retrieve Breeth Candidate Memories for relevant topic
+        memories = []
+        try:
+            from app.services.breeth_memory import breeth_memory_service
+            cand_id = candidate.member.id if candidate and candidate.member else "cand_default"
+            memories = await breeth_memory_service.query_candidate_memories(
+                candidate_id=cand_id,
+                query_topic=f"{day_title} {required_skills}",
+                top_k=3
+            )
+        except Exception as b_err:
+            pass
+
+        memory_ctx = "\n".join([f"- {m}" for m in memories]) if memories else "None available"
+
         llm = get_llm(temperature=0.7)
         if llm:
             try:
@@ -39,8 +54,9 @@ class QuestionGenerator:
                     f"Job Skill Requirements: {required_skills}\n"
                     f"Curriculum Topic: Day {day} - {day_title}\n"
                     f"Curriculum Context: {context}\n"
-                    f"Candidate Background: {years_exp} yrs exp in {job_role}.\n\n"
-                    f"Ask ONE scenario-based technical question (Question #{turn_index}) directly referencing the role at {company} and testing practical knowledge of {day_title}."
+                    f"Candidate Background: {years_exp} yrs exp in {job_role}.\n"
+                    f"Demonstrated Candidate Breeth Memories:\n{memory_ctx}\n\n"
+                    f"Ask ONE scenario-based technical question (Question #{turn_index}) directly referencing the role at {company}, candidate demonstrated memories, and testing practical knowledge of {day_title}."
                 )
 
                 response = await llm.ainvoke([HumanMessage(content=prompt)])

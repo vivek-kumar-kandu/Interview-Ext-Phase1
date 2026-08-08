@@ -6,22 +6,59 @@ ENV/
 env/
 Interview/
 
-# Build outputs
+# Build & Output Directories
 dist/
+dist-ssr/
 build/
-.pytest_cache/
+out/
+.vite/
+.turbo/
+
+# Python Cache & Testing
 __pycache__/
 *.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.cache/
 
-# Environment files
+# Logs & Temporary Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend-log.txt
+logs/
+*.tmp
+*.temp
+
+# Environment & Secret Files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+!.env.example
 
-# IDE & OS
-.vscode/
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# IDE & OS Files
+.vscode/*
+!.vscode/settings.json
 .idea/
 .DS_Store
 Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+

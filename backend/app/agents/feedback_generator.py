@@ -30,7 +30,8 @@ class FeedbackGenerator:
         reasoning_score = min(96, max(50, int(overall_score + 1)))
         # Calculate dynamic match score from job/candidate skill alignment
         req_skills = session.job.skills if session.job and session.job.skills else ["FastAPI", "Docker", "LangGraph", "Redis"]
-        cand_skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"]
+        from app.services.candidate_analyzer import candidate_analyzer
+        cand_skills = candidate_analyzer.extract_candidate_skills(session.candidate) if session.candidate else ["FastAPI", "LangGraph", "Python", "React", "TypeScript"]
         matched_count = len([s for s in req_skills if s in cand_skills])
         match_score = min(98, max(65, int((matched_count / max(len(req_skills), 1)) * 100)))
         readiness_score = min(96, max(60, int(overall_score * 0.95 + 5)))

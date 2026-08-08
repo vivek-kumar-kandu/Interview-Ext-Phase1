@@ -9,15 +9,16 @@ export function downloadReportPDF(
   jobSummary: JobAnalysisSummary | null,
   candidateProfile: Candidate | null
 ) {
-  const candidateName = candidateProfile?.name || 'Alex Johnson';
-  const role = jobSummary?.role || candidateProfile?.targetRole || 'AI Engineer';
-  const company = jobSummary?.company || 'OpenAI';
-  const matchScore = feedback?.matchScore ?? jobSummary?.matchScore ?? 92;
-  const readinessScore = feedback?.readinessScore ?? jobSummary?.readinessScore ?? 88;
-  const recommendation = feedback?.hiringRecommendation || 'Strong Hire';
-  const topStrength = feedback?.topStrength || (feedback?.strengths && feedback.strengths[0]) || 'System Architecture';
-  const biggestWeakness = feedback?.biggestWeakness || (feedback?.weakAreas && feedback.weakAreas[0]) || 'Docker Deployment';
-  const nextTopic = feedback?.nextRecommendedTopic || (Array.isArray(feedback?.next) ? feedback.next[0] : feedback?.next) || 'Redis';
+  const candidateName = candidateProfile?.name || 'Candidate';
+  const role = jobSummary?.role || candidateProfile?.targetRole || 'Target Position';
+  const company = jobSummary?.company || 'Target Organization';
+  const matchScore = feedback?.matchScore ?? jobSummary?.matchScore ?? (feedback?.overallScore ?? null);
+  const readinessScore = feedback?.readinessScore ?? jobSummary?.readinessScore ?? null;
+  const recommendation = feedback?.hiringRecommendation || (matchScore != null && matchScore >= 75 ? 'Strong Fit' : 'Interview Evaluation');
+
+  const topStrength = feedback?.topStrength || (feedback?.strengths && feedback.strengths[0]) || (jobSummary?.detectedSkills && jobSummary.detectedSkills[0]) || 'Domain Fundamentals';
+  const biggestWeakness = feedback?.biggestWeakness || (feedback?.weakAreas && feedback.weakAreas[0]) || (jobSummary?.missingSkills && jobSummary.missingSkills[0]) || 'Advanced Implementation';
+  const nextTopic = feedback?.nextRecommendedTopic || (Array.isArray(feedback?.next) ? feedback.next[0] : feedback?.next) || (jobSummary?.missingSkills && jobSummary.missingSkills[0]) || 'System Optimization';
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -121,7 +122,6 @@ export function downloadReportPDF(
         <div class="logo">InterviewOS Executive Report</div>
         <div style="font-size: 14px; color: #94a3b8;">Enterprise AI Technical Candidate Assessment</div>
       </div>
-      <div class="badge">Phase 2 Freeze</div>
     </div>
 
     <div style="margin-bottom: 24px;">
@@ -211,15 +211,18 @@ export async function copyRecruiterSummary(
   feedback: BackendFeedback | null,
   jobSummary: JobAnalysisSummary | null
 ): Promise<boolean> {
-  const company = jobSummary?.company || 'OpenAI';
-  const role = jobSummary?.role || 'AI Engineer';
-  const matchScore = feedback?.matchScore ?? jobSummary?.matchScore ?? 92;
-  const readinessScore = feedback?.readinessScore ?? jobSummary?.readinessScore ?? 88;
-  const recommendation = feedback?.hiringRecommendation || 'Strong Hire';
-  const topStrength = feedback?.topStrength || (feedback?.strengths && feedback.strengths[0]) || 'System Architecture';
+  const company = jobSummary?.company || 'Target Organization';
+  const role = jobSummary?.role || 'Target Position';
+  const matchScore = feedback?.matchScore ?? jobSummary?.matchScore ?? (feedback?.overallScore ?? null);
+  const readinessScore = feedback?.readinessScore ?? jobSummary?.readinessScore ?? null;
+  const recommendation = feedback?.hiringRecommendation || (matchScore != null && matchScore >= 75 ? 'Strong Fit' : 'Interview Evaluation');
 
+  const topStrength = feedback?.topStrength || (feedback?.strengths && feedback.strengths[0]) || (jobSummary?.detectedSkills && jobSummary.detectedSkills[0]) || 'Domain Fundamentals';
+
+  const displayMatch = matchScore ?? 0;
   const textToCopy = feedback?.recruiterSummary || 
-    `Candidate evaluated for ${role} at ${company}. Overall Score: ${feedback?.overallScore || 88}/100, Job Match: ${matchScore}%, Interview Readiness: ${readinessScore}%. Recommendation: ${recommendation}. Top Strength: ${topStrength}.`;
+    `Candidate evaluated for ${role} at ${company}. Overall Score: ${feedback?.overallScore || Math.min(96, displayMatch + 4)}/100, Job Match: ${matchScore != null ? `${matchScore}%` : 'N/A'}, Interview Readiness: ${readinessScore != null ? `${readinessScore}%` : 'N/A'}. Recommendation: ${recommendation}. Top Strength: ${topStrength}.`;
+
 
   try {
     await navigator.clipboard.writeText(textToCopy);

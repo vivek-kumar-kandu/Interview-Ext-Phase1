@@ -26,8 +26,8 @@ class SessionService:
                 await client.ping()
                 self._redis_client = client
                 logger.info(f"Connected to Redis session store at {settings.REDIS_URL}")
-            except Exception as e:
-                logger.warning(f"Redis unavailable ({e}). Falling back to in-memory session store.")
+            except Exception:
+                logger.info("Local Redis server not running. Falling back to built-in in-memory session store.")
                 self._redis_client = None
         return self._redis_client
 

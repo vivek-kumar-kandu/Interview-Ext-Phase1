@@ -6,8 +6,8 @@ export const apiClient = {
     return response.data;
   },
 
-  post: async <T, TData = unknown>(url: string, data?: TData): Promise<T> => {
-    const response = await apiClientInstance.post<T>(url, data);
+  post: async <T, TData = unknown>(url: string, data?: TData, config?: any): Promise<T> => {
+    const response = await apiClientInstance.post<T>(url, data, config);
     return response.data;
   },
 };

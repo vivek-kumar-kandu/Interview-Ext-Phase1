@@ -29,6 +29,50 @@ export interface ProgressMetrics {
   roadmapProgress: RoadmapItem[];
 }
 
+export interface EvidenceItem {
+  category: string;
+  title: string;
+  detail: string;
+  sourcePlatform?: string;
+}
+
+export interface MetricBreakdownItem {
+  metric: string;
+  score: number;
+  weight: number;
+  weightedScore: number;
+  evidence: string;
+}
+
+export interface MetricScore {
+  score: number;
+  label: string;
+  calculation: string;
+  weights: Record<string, number>;
+  breakdown: MetricBreakdownItem[];
+  evidence: EvidenceItem[];
+  confidence: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+}
+
+export interface DynamicSkillGap {
+  skill: string;
+  status: 'matched' | 'partially_matched' | 'missing';
+  evidence: string;
+  sourcePlatform?: string;
+}
+
+export interface CandidateJobComparisonResponse {
+  candidateName: string;
+  jobTitle: string;
+  company: string;
+  matchScore: MetricScore;
+  jobReadiness: MetricScore;
+  skillGaps: DynamicSkillGap[];
+  explanationText: string;
+}
+
 export interface JobAnalysisSummary {
   company: string;
   role: string;
@@ -40,6 +84,9 @@ export interface JobAnalysisSummary {
   requiredSkills: string[];
   candidateSkills: string[];
   missingSkills: string[];
+  matchMetricDetails?: MetricScore;
+  jobReadinessMetricDetails?: MetricScore;
+  skillGapDetails?: DynamicSkillGap[];
 }
 
 export interface BackendFeedback {

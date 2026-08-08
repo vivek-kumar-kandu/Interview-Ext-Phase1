@@ -1,19 +1,72 @@
-from fastapi import APIRouter, HTTPException, status
-from app.schemas.interview import InterviewRequest, InterviewResponse
+from typing import Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, status, Request
+from app.schemas.interview import (
+    StartInterviewRequest,
+    StartInterviewResponse,
+    InterviewAnswerRequest,
+    InterviewAnswerResponse,
+    IntegrityEventRequest,
+    InterviewRequest,
+    InterviewResponse
+)
+from app.services.lpa_interview_engine import lpa_interview_engine
 from app.agents.orchestrator import interview_orchestrator
 
 router = APIRouter()
 
 
-@router.post("/interview", response_model=InterviewResponse, status_code=status.HTTP_200_OK)
-async def process_interview_turn(request: InterviewRequest) -> InterviewResponse:
+@router.post("/interview/start", response_model=StartInterviewResponse, status_code=status.HTTP_200_OK)
+@router.post("/extension/start-interview", response_model=StartInterviewResponse, status_code=status.HTTP_200_OK)
+async def start_lpa_interview(request: StartInterviewRequest) -> StartInterviewResponse:
     """
-    Single stateful REST endpoint handling interview initialization and conversation turns.
-    Conforms strictly to technical-spec.md contract.
+    Initializes a new dynamic AI technical interview session calibrated against candidate expected LPA,
+    resume evidence, target job details, and match gaps.
+    """
+    res = await lpa_interview_engine.start_interview(
+        candidate_profile=request.candidateProfile,
+        job_profile=request.jobProfile,
+        match_analysis=request.matchAnalysis,
+        expected_lpa=request.expectedLpa,
+        session_id=request.sessionId
+    )
+    return StartInterviewResponse(**res)
+
+
+@router.post("/interview/answer", response_model=InterviewAnswerResponse, status_code=status.HTTP_200_OK)
+@router.post("/extension/process-interview-answer", response_model=InterviewAnswerResponse, status_code=status.HTTP_200_OK)
+async def process_lpa_interview_answer(request: InterviewAnswerRequest) -> InterviewAnswerResponse:
+    """
+    Processes candidate answer, evaluates technical depth, and generates next adaptive question or final feedback via Gemini.
+    """
+    res = await lpa_interview_engine.process_answer(
+        session_id=request.sessionId,
+        answer=request.answer,
+        expected_lpa_override=request.expectedLpa
+    )
+    return InterviewAnswerResponse(**res)
+
+
+@router.post("/interview/integrity", status_code=status.HTTP_200_OK)
+@router.post("/extension/log-interview-integrity", status_code=status.HTTP_200_OK)
+async def log_integrity_event(request: IntegrityEventRequest) -> Dict[str, Any]:
+    """
+    Logs observable interview integrity events (fullscreen exit, tab visibility change).
+    """
+    return await lpa_interview_engine.log_integrity_event(
+        session_id=request.sessionId,
+        event_type=request.eventType,
+        timestamp=request.timestamp,
+        detail=request.detail
+    )
+
+
+@router.post("/interview", response_model=InterviewResponse, status_code=status.HTTP_200_OK)
+async def process_legacy_interview_turn(request: InterviewRequest) -> InterviewResponse:
+    """
+    Legacy stateful endpoint handler for backward compatibility.
     """
     try:
-        response = await interview_orchestrator.process_turn(request)
-        return response
+        return await interview_orchestrator.process_turn(request)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
