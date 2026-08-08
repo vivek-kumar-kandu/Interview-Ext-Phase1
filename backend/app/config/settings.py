@@ -30,7 +30,7 @@ class Settings:
     @property
     def GEMINI_MODEL(self) -> str:
         _reload_env()
-        return os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+        return os.getenv("GEMINI_MODEL", "gemini-flash-latest").strip()
 
     @property
     def GEMINI_API_KEYS(self) -> list[str]:

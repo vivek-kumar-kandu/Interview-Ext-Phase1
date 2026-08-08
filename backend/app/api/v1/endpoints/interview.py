@@ -16,6 +16,7 @@ router = APIRouter()
 
 
 @router.post("/interview/start", response_model=StartInterviewResponse, status_code=status.HTTP_200_OK)
+@router.post("/extension/interview/start", response_model=StartInterviewResponse, status_code=status.HTTP_200_OK)
 @router.post("/extension/start-interview", response_model=StartInterviewResponse, status_code=status.HTTP_200_OK)
 async def start_lpa_interview(request: StartInterviewRequest) -> StartInterviewResponse:
     """
@@ -23,16 +24,20 @@ async def start_lpa_interview(request: StartInterviewRequest) -> StartInterviewR
     resume evidence, target job details, and match gaps.
     """
     res = await lpa_interview_engine.start_interview(
-        candidate_profile=request.candidateProfile,
-        job_profile=request.jobProfile,
-        match_analysis=request.matchAnalysis,
+        candidate_profile=request.candidateProfile or request.candidate or {},
+        job_profile=request.jobProfile or request.job or {},
+        match_analysis=request.matchAnalysis or {},
         expected_lpa=request.expectedLpa,
-        session_id=request.sessionId
+        session_id=request.sessionId,
+        job=request.job,
+        candidate=request.candidate,
+        interview_preferences=request.interviewPreferences
     )
     return StartInterviewResponse(**res)
 
 
 @router.post("/interview/answer", response_model=InterviewAnswerResponse, status_code=status.HTTP_200_OK)
+@router.post("/extension/interview/answer", response_model=InterviewAnswerResponse, status_code=status.HTTP_200_OK)
 @router.post("/extension/process-interview-answer", response_model=InterviewAnswerResponse, status_code=status.HTTP_200_OK)
 async def process_lpa_interview_answer(request: InterviewAnswerRequest) -> InterviewAnswerResponse:
     """
@@ -41,16 +46,19 @@ async def process_lpa_interview_answer(request: InterviewAnswerRequest) -> Inter
     res = await lpa_interview_engine.process_answer(
         session_id=request.sessionId,
         answer=request.answer,
-        expected_lpa_override=request.expectedLpa
+        expected_lpa_override=request.expectedLpa,
+        elapsed_seconds=request.elapsedSeconds,
+        integrity_metrics=request.integrityMetrics
     )
     return InterviewAnswerResponse(**res)
 
 
 @router.post("/interview/integrity", status_code=status.HTTP_200_OK)
+@router.post("/extension/interview/integrity", status_code=status.HTTP_200_OK)
 @router.post("/extension/log-interview-integrity", status_code=status.HTTP_200_OK)
 async def log_integrity_event(request: IntegrityEventRequest) -> Dict[str, Any]:
     """
-    Logs observable interview integrity events (fullscreen exit, tab visibility change).
+    Logs observable interview integrity events (fullscreen exit, tab visibility change, camera/mic unavailability).
     """
     return await lpa_interview_engine.log_integrity_event(
         session_id=request.sessionId,

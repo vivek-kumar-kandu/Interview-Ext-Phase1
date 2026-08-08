@@ -365,35 +365,60 @@ export const interviewApi = {
     }
   },
 
-  startLpaInterview: async (payload: { candidateProfile: any; jobProfile: any; matchAnalysis: any; expectedLpa: number; sessionId?: string }): Promise<any> => {
+  startLpaInterview: async (payload: { candidateProfile?: any; jobProfile?: any; matchAnalysis?: any; expectedLpa?: number; sessionId?: string; job?: any; candidate?: any; interviewPreferences?: any }): Promise<any> => {
     try {
-      const res = await apiClient.post<any>('/api/interview/start', payload);
+      const res = await apiClient.post<any>('/api/extension/interview/start', payload);
       return res;
     } catch (e: any) {
-      console.error('[InterviewOS] startLpaInterview failed:', e);
-      const detail = e?.response?.data?.detail || e?.message || 'AI interviewer is temporarily unavailable. Please try again.';
-      throw new Error(detail);
+      console.warn('[InterviewOS] /api/extension/interview/start fallback to /api/interview/start:', e);
+      try {
+        const res2 = await apiClient.post<any>('/api/interview/start', payload);
+        return res2;
+      } catch (e2: any) {
+        console.error('[InterviewOS] startLpaInterview failed:', e2);
+        const detail = e2?.response?.data?.detail || e2?.message || 'AI interviewer is temporarily unavailable. Please try again.';
+        throw new Error(detail);
+      }
     }
   },
 
-  processLpaAnswer: async (payload: { sessionId: string; answer: string; expectedLpa?: number }): Promise<any> => {
+  startInterview: async (payload: any): Promise<any> => {
+    return interviewApi.startLpaInterview(payload);
+  },
+
+  processLpaAnswer: async (payload: { sessionId: string; answer: string; expectedLpa?: number; elapsedSeconds?: number; integrityMetrics?: any }): Promise<any> => {
     try {
-      const res = await apiClient.post<any>('/api/interview/answer', payload);
+      const res = await apiClient.post<any>('/api/extension/interview/answer', payload);
       return res;
     } catch (e: any) {
-      console.error('[InterviewOS] processLpaAnswer failed:', e);
-      const detail = e?.response?.data?.detail || e?.message || 'AI interviewer is temporarily unavailable. Please try again.';
-      throw new Error(detail);
+      console.warn('[InterviewOS] /api/extension/interview/answer fallback to /api/interview/answer:', e);
+      try {
+        const res2 = await apiClient.post<any>('/api/interview/answer', payload);
+        return res2;
+      } catch (e2: any) {
+        console.error('[InterviewOS] processLpaAnswer failed:', e2);
+        const detail = e2?.response?.data?.detail || e2?.message || 'AI interviewer is temporarily unavailable. Please try again.';
+        throw new Error(detail);
+      }
     }
+  },
+
+  submitAnswer: async (payload: any): Promise<any> => {
+    return interviewApi.processLpaAnswer(payload);
   },
 
   logIntegrityEvent: async (payload: { sessionId: string; eventType: string; timestamp?: string; detail?: string }): Promise<any> => {
     try {
-      const res = await apiClient.post<any>('/api/interview/integrity', payload);
+      const res = await apiClient.post<any>('/api/extension/interview/integrity', payload);
       return res;
     } catch (e: any) {
-      console.warn('[InterviewOS] logIntegrityEvent notice:', e);
-      return null;
+      try {
+        const res2 = await apiClient.post<any>('/api/interview/integrity', payload);
+        return res2;
+      } catch (e2) {
+        console.warn('[InterviewOS] logIntegrityEvent notice:', e2);
+        return null;
+      }
     }
   },
 };

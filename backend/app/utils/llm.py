@@ -1,8 +1,134 @@
 import logging
-from typing import Optional, Any
+import asyncio
+import re
+from typing import Optional, Any, List
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# How long to wait (seconds) between retries for 429 RESOURCE_EXHAUSTED
+_RETRY_DELAYS = [30, 60, 90]
+
+
+def _parse_retry_delay(err_str: str) -> Optional[float]:
+    """Extract the retryDelay value (e.g. '36s') from a Gemini 429 error string."""
+    match = re.search(r"retryDelay[^:=]*[:=][^0-9]*(\d+(?:\.\d+)?)s", err_str, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    return None
+
+
+class _AQGeminiWrapper:
+    """
+    LangChain-compatible async wrapper for AQ. format Gemini credentials.
+
+    Google AI Studio now generates AQ. OAuth Bearer tokens instead of
+    AIzaSy API keys. These tokens work with google.genai.Client(credentials=...)
+    but NOT with ChatGoogleGenerativeAI(google_api_key=...).
+
+    This wrapper provides an ainvoke() interface matching LangChain's convention
+    so the rest of the codebase (lpa_interview_engine, etc.) works unchanged.
+
+    Automatically retries on 429 RESOURCE_EXHAUSTED with exponential backoff.
+    """
+
+    def __init__(self, key: str, model: str, temperature: float = 0.7):
+        from google import genai
+        from google.oauth2.credentials import Credentials
+        self._client = genai.Client(credentials=Credentials(token=key))
+        self._model = model
+        self._temperature = temperature
+        logger.info(f"[GEMINI_AQ_WRAPPER] Initialized google.genai.Client with AQ. credentials (model={model})")
+
+    async def ainvoke(self, messages: List[Any]) -> Any:
+        """
+        Accepts a list of LangChain message objects and returns a response
+        object with a .content attribute — same interface as ChatGoogleGenerativeAI.
+        Retries automatically on 429 RESOURCE_EXHAUSTED up to 3 times.
+        """
+        # Flatten all message content into a single prompt string
+        parts = []
+        for m in messages:
+            if hasattr(m, "content"):
+                parts.append(m.content)
+            elif isinstance(m, dict):
+                parts.append(m.get("content", str(m)))
+            else:
+                parts.append(str(m))
+        prompt = "\n\n".join(parts)
+
+        retry_delays = list(_RETRY_DELAYS)  # local copy so we can patch per-call
+        last_exc = None
+        for attempt, delay in enumerate([0] + retry_delays):
+            if delay > 0:
+                logger.warning(
+                    f"[GEMINI_RETRY] 429 quota hit — waiting {delay}s before retry "
+                    f"(attempt {attempt}/{len(retry_delays)})…"
+                )
+                await asyncio.sleep(delay)
+            try:
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self._client.models.generate_content(
+                        model=self._model,
+                        contents=prompt,
+                    )
+                )
+
+                class _Response:
+                    def __init__(self, text: str):
+                        self.content = text
+
+                return _Response(response.text)
+
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    last_exc = e
+                    # Honour the retryDelay from the API response if available
+                    api_delay = _parse_retry_delay(err_str)
+                    if api_delay and attempt < len(retry_delays):
+                        retry_delays[attempt] = max(retry_delays[attempt], api_delay + 5)
+                    continue  # retry
+                raise  # non-429 errors surface immediately
+
+        assert last_exc is not None
+        raise last_exc  # all retries exhausted
+
+
+class _LangChainGeminiWithRetry:
+    """
+    Thin wrapper around ChatGoogleGenerativeAI that adds retry-on-429 logic,
+    because langchain_google_genai does not natively back off on free-tier quota limits.
+    """
+
+    def __init__(self, llm: Any):
+        self._llm = llm
+
+    async def ainvoke(self, messages: List[Any]) -> Any:
+        retry_delays = list(_RETRY_DELAYS)
+        last_exc = None
+        for attempt, delay in enumerate([0] + retry_delays):
+            if delay > 0:
+                logger.warning(
+                    f"[GEMINI_RETRY] 429 quota hit — waiting {delay}s before retry "
+                    f"(attempt {attempt}/{len(retry_delays)})…"
+                )
+                await asyncio.sleep(delay)
+            try:
+                return await self._llm.ainvoke(messages)
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    last_exc = e
+                    api_delay = _parse_retry_delay(err_str)
+                    if api_delay and attempt < len(retry_delays):
+                        retry_delays[attempt] = max(retry_delays[attempt], api_delay + 5)
+                    continue
+                raise
+
+        assert last_exc is not None
+        raise last_exc
 
 
 def get_llm(
@@ -12,12 +138,21 @@ def get_llm(
     provider: Optional[str] = None
 ) -> Optional[Any]:
     """
-    Unified LLM Factory returning either ChatGoogleGenerativeAI (Gemini)
-    or ChatOpenAI depending on configured environment keys and provider.
-    Returns None if no valid API key is present.
+    Unified LLM Factory.
+
+    Supports:
+    - AIzaSy... format (legacy simple API keys) → ChatGoogleGenerativeAI (with retry wrapper)
+    - AQ. format (new Google AI Studio OAuth2 credentials) → _AQGeminiWrapper (with retry)
+
+    Returns None if no valid key is present.
     """
     gemini_key = api_key_override or settings.GEMINI_API_KEY
     gemini_model = model_name or settings.GEMINI_MODEL
+
+    # Auto-upgrade deprecated Gemini 1.5 models to gemini-flash-latest to prevent 404 NOT_FOUND errors
+    if gemini_model and "1.5" in gemini_model:
+        logger.warning(f"[GEMINI_MODEL_UPGRADE] Model '{gemini_model}' is deprecated. Upgrading to 'gemini-flash-latest'.")
+        gemini_model = "gemini-flash-latest"
 
     # Explicit OpenAI request
     if provider == "openai":
@@ -35,30 +170,42 @@ def get_llm(
                 logger.warning(f"Failed to initialize ChatOpenAI: {e}")
         return None
 
-    # Default / Gemini request
+    # Gemini request
     if gemini_key and provider != "openai":
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            fp = settings.get_key_fingerprint(gemini_key)
-            key_len = len(gemini_key)
-            logger.info(
-                f"[GEMINI_CONFIG]\n"
-                f"configured=true\n"
-                f"key_length={key_len}\n"
-                f"key_fingerprint={fp}\n"
-                f"model={gemini_model}"
-            )
-            return ChatGoogleGenerativeAI(
-                model=gemini_model,
-                google_api_key=gemini_key,
-                temperature=temperature,
-                max_retries=0
-            )
-        except Exception as e:
-            logger.warning(f"[GEMINI_INIT_ERROR] Failed to initialize ChatGoogleGenerativeAI ({gemini_model}): {e}")
+        fp = settings.get_key_fingerprint(gemini_key)
+        key_len = len(gemini_key)
+        is_aq = gemini_key.startswith("AQ.")
 
+        logger.info(
+            f"[GEMINI_CONFIG]\n"
+            f"configured=true\n"
+            f"key_length={key_len}\n"
+            f"key_fingerprint={fp}\n"
+            f"key_format={'AQ. (OAuth Bearer)' if is_aq else 'AIzaSy (API Key)'}\n"
+            f"model={gemini_model}"
+        )
 
-    # Fall back to OpenAI if OPENAI_API_KEY is present
+        if is_aq:
+            # New Google AI Studio AQ. format — use OAuth Bearer wrapper (has built-in retry)
+            try:
+                return _AQGeminiWrapper(key=gemini_key, model=gemini_model, temperature=temperature)
+            except Exception as e:
+                logger.warning(f"[GEMINI_AQ_INIT_ERROR] Failed to initialize AQ wrapper: {e}")
+        else:
+            # Standard AIzaSy API key — wrap ChatGoogleGenerativeAI with retry logic
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                base_llm = ChatGoogleGenerativeAI(
+                    model=gemini_model,
+                    google_api_key=gemini_key,
+                    temperature=temperature,
+                    max_retries=0  # We handle retries ourselves
+                )
+                return _LangChainGeminiWithRetry(base_llm)
+            except Exception as e:
+                logger.warning(f"[GEMINI_INIT_ERROR] Failed to initialize ChatGoogleGenerativeAI ({gemini_model}): {e}")
+
+    # Fallback to OpenAI
     if settings.OPENAI_API_KEY:
         try:
             from langchain_openai import ChatOpenAI
@@ -73,4 +220,3 @@ def get_llm(
             logger.warning(f"Failed to initialize ChatOpenAI fallback: {e}")
 
     return None
-

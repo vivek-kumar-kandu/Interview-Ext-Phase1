@@ -81,26 +81,28 @@ export function normalizeJobMatchResponse(res: any): CanonicalJobMatchResult | n
   if (!res || typeof res !== 'object') return null;
 
   const rawMatch = res.match || {};
-  const rawMatchScore = res.matchScore || {};
+  const rawMatchScore = res.matchScore;
 
-  const overall = typeof rawMatch.overall === 'number'
-    ? rawMatch.overall
-    : typeof rawMatchScore.score === 'number'
+  const overall = typeof rawMatchScore === 'number'
+    ? rawMatchScore
+    : (typeof rawMatchScore === 'object' && rawMatchScore !== null && typeof rawMatchScore.score === 'number')
     ? rawMatchScore.score
+    : typeof rawMatch.overall === 'number'
+    ? rawMatch.overall
     : typeof res.score === 'number'
     ? res.score
     : null;
 
   if (overall === null) return null;
 
-  const label = res.recommendation || rawMatchScore.label || (
+  const label = res.recommendation || (typeof rawMatchScore === 'object' && rawMatchScore !== null ? rawMatchScore.label : null) || (
     overall >= 80 ? 'Strong Match' : overall >= 60 ? 'Good Match' : 'Potential Match'
   );
 
   const matchScoreObj = {
     score: overall,
     label,
-    breakdown: rawMatch.breakdown || rawMatchScore.breakdown || rawMatch
+    breakdown: (typeof rawMatchScore === 'object' && rawMatchScore !== null) ? (rawMatchScore.breakdown || rawMatch) : rawMatch
   };
 
   const matchScores = {
@@ -113,13 +115,13 @@ export function normalizeJobMatchResponse(res: any): CanonicalJobMatchResult | n
 
   const matchedSkills = Array.isArray(res.matchedSkills)
     ? res.matchedSkills
-    : Array.isArray(rawMatchScore.matchedSkills)
+    : (typeof rawMatchScore === 'object' && rawMatchScore !== null && Array.isArray(rawMatchScore.matchedSkills))
     ? rawMatchScore.matchedSkills
     : [];
 
   const missingSkills = Array.isArray(res.missingSkills)
     ? res.missingSkills
-    : Array.isArray(rawMatchScore.missingSkills)
+    : (typeof rawMatchScore === 'object' && rawMatchScore !== null && Array.isArray(rawMatchScore.missingSkills))
     ? rawMatchScore.missingSkills
     : [];
 

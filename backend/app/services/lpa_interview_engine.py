@@ -32,57 +32,62 @@ class LPAInterviewEngine:
         candidate_profile: Dict[str, Any],
         job_profile: Dict[str, Any],
         match_analysis: Dict[str, Any],
-        expected_lpa: float,
-        session_id: Optional[str] = None
+        expected_lpa: float = 12.0,
+        session_id: Optional[str] = None,
+        job: Optional[Dict[str, Any]] = None,
+        candidate: Optional[Dict[str, Any]] = None,
+        interview_preferences: Optional[Dict[str, Any]] = None,
+        api_key_override: Optional[str] = None
     ) -> Dict[str, Any]:
-        if expected_lpa <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="INVALID_LPA: Please enter a valid positive expected LPA amount."
-            )
-
+        lpa_to_use = expected_lpa if (expected_lpa and expected_lpa > 0) else 12.0
         sid = session_id or f"sess_{uuid.uuid4().hex[:12]}"
-        
+        intv_id = f"intv_{uuid.uuid4().hex[:10]}"
+
+        # Merge candidate context
+        cand_ctx = candidate or candidate_profile or {}
+        job_ctx = job or job_profile or {}
+
         # Load or create session
         session = SessionState(
             session_id=sid,
-            candidate_profile_dict=candidate_profile,
-            match_analysis=match_analysis,
-            expected_lpa=expected_lpa,
+            candidate_profile_dict=cand_ctx,
+            match_analysis=match_analysis or {},
+            expected_lpa=lpa_to_use,
             questions_asked=1
         )
 
-        llm = get_llm(temperature=0.7)
+        llm = get_llm(temperature=0.7, api_key_override=api_key_override)
         if not llm:
             logger.error("[LPA_INTERVIEW] Gemini LLM unavailable (missing API key or initialization failed)")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI interviewer is temporarily unavailable. Please try again."
+                detail="AI interviewer is temporarily unavailable. Please check backend LLM configuration."
             )
 
         # Extract structured evidence context
-        cand_name = candidate_profile.get("name") or candidate_profile.get("candidateName") or "Candidate"
-        cand_skills = candidate_profile.get("skills") or candidate_profile.get("keySkills") or candidate_profile.get("technicalSkills") or []
-        cand_exp = candidate_profile.get("experience") or []
-        cand_projects = candidate_profile.get("projects") or []
-        cand_edu = candidate_profile.get("education") or []
+        cand_name = cand_ctx.get("name") or cand_ctx.get("candidateName") or "Candidate"
+        cand_skills = cand_ctx.get("skills") or cand_ctx.get("keySkills") or cand_ctx.get("technicalSkills") or []
+        cand_exp = cand_ctx.get("experience") or []
+        cand_projects = cand_ctx.get("projects") or []
+        cand_edu = cand_ctx.get("education") or []
 
-        job_title = job_profile.get("jobTitle") or job_profile.get("title") or "Technical Position"
-        company = job_profile.get("company") or "Target Company"
-        job_skills = job_profile.get("skills") or []
-        job_desc = job_profile.get("description") or ""
+        job_id = job_ctx.get("id") or job_ctx.get("jobId") or f"job_{uuid.uuid4().hex[:8]}"
+        job_title = job_ctx.get("jobTitle") or job_ctx.get("title") or job_ctx.get("role") or "Technical Position"
+        company = job_ctx.get("company") or "Target Company"
+        job_skills = job_ctx.get("skills") or job_ctx.get("requiredSkills") or []
+        job_desc = job_ctx.get("description") or job_ctx.get("jobDescription") or ""
 
         matched_skills = match_analysis.get("matchedSkills") or []
         missing_skills = match_analysis.get("missingSkills") or []
         match_score = match_analysis.get("matchScore") or match_analysis.get("match", {}).get("overall") or "N/A"
 
-        difficulty_lbl = self._determine_lpa_difficulty(expected_lpa)
+        difficulty_lbl = self._determine_lpa_difficulty(lpa_to_use)
 
         prompt = f"""
 You are a Principal AI Technical Interviewer at InterviewOS conducting a live personalized technical interview.
 
 INTERVIEW CALIBRATION:
-- Candidate Expected LPA: ₹{expected_lpa} LPA
+- Candidate Expected LPA: ₹{lpa_to_use} LPA
 - Role Target: {job_title} at {company}
 - Interview Difficulty Calibration: {difficulty_lbl}
 
@@ -106,7 +111,7 @@ MATCH ANALYSIS & GAP SIGNALS:
 
 REQUIREMENTS FOR FIRST QUESTION:
 1. Ground the question directly in REAL candidate resume evidence (e.g. a specific project, technology, or role experience) combined with job requirements.
-2. Calibrate difficulty for ₹{expected_lpa} LPA:
+2. Calibrate difficulty for ₹{lpa_to_use} LPA:
    - For 1-8 LPA: Test technical fundamentals, core programming concepts, and practical project understanding.
    - For 9-18 LPA: Test architecture choices, trade-offs, debugging scenarios, and API/database design.
    - For 19+ LPA: Test system design, scalability under load, production failures, performance optimization, and deep architectural decisions.
@@ -140,9 +145,18 @@ Return ONLY valid JSON matching this structure:
 
         except Exception as e:
             logger.error(f"[GEMINI_INTERVIEW_ERROR] Failed to generate first interview question: {e}")
+            err_str = str(e)
+            if "403" in err_str or "PERMISSION_DENIED" in err_str or "disabled" in err_str.lower():
+                detail_msg = "Google Generative Language API is disabled or restricted for this project (403 PERMISSION_DENIED). Please enable it at https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview or check API restrictions in Google Cloud Console."
+            elif "401" in err_str or "UNAUTHENTICATED" in err_str or "ACCESS_TOKEN" in err_str:
+                detail_msg = "Gemini API key authentication failed (401 UNAUTHENTICATED). Please verify the GEMINI_API_KEY set in backend/.env."
+            elif "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                detail_msg = "Gemini API rate limit or quota exceeded (429 RESOURCE_EXHAUSTED). Please wait a moment and try again."
+            else:
+                detail_msg = f"AI interviewer is temporarily unavailable: {err_str}"
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI interviewer is temporarily unavailable. Please try again."
+                detail=detail_msg
             )
 
         session.current_question = q_text
@@ -152,22 +166,44 @@ Return ONLY valid JSON matching this structure:
 
         await session_service.save_session(session)
 
+        first_q_obj = {
+            "id": f"q_1_{uuid.uuid4().hex[:6]}",
+            "text": q_text,
+            "category": q_topic,
+            "difficulty": q_diff,
+            "expectedSignals": matched_skills[:3] if matched_skills else ["Technical Depth"]
+        }
+
+        session_summary_obj = {
+            "title": f"{job_title} AI Technical Interview",
+            "focusAreas": [q_topic] + (job_skills[:3] if job_skills else []),
+            "difficulty": q_diff,
+            "estimatedQuestions": 8
+        }
+
         return {
             "success": True,
             "sessionId": sid,
+            "interviewId": intv_id,
+            "jobId": job_id,
             "questionNumber": 1,
             "question": q_text,
             "topic": q_topic,
             "difficulty": q_diff,
             "totalQuestionsEstimate": 8,
-            "expectedLpa": expected_lpa
+            "expectedLpa": lpa_to_use,
+            "session": session_summary_obj,
+            "firstQuestion": first_q_obj
         }
 
     async def process_answer(
         self,
         session_id: str,
         answer: str,
-        expected_lpa_override: Optional[float] = None
+        expected_lpa_override: Optional[float] = None,
+        elapsed_seconds: Optional[int] = None,
+        integrity_metrics: Optional[Dict[str, Any]] = None,
+        api_key_override: Optional[str] = None
     ) -> Dict[str, Any]:
         session = await session_service.get_session(session_id)
         if not session:
@@ -182,7 +218,7 @@ Return ONLY valid JSON matching this structure:
                 detail="EMPTY_ANSWER: Please provide a meaningful response to the question."
             )
 
-        llm = get_llm(temperature=0.7)
+        llm = get_llm(temperature=0.7, api_key_override=api_key_override)
         if not llm:
             logger.error("[LPA_INTERVIEW] Gemini LLM unavailable")
             raise HTTPException(
@@ -192,6 +228,17 @@ Return ONLY valid JSON matching this structure:
 
         expected_lpa = expected_lpa_override or session.expected_lpa or 12.0
         session.expected_lpa = expected_lpa
+
+        # Store integrity metrics if passed
+        if integrity_metrics and isinstance(integrity_metrics, dict):
+            detail_str = f"fullscreenExits={integrity_metrics.get('fullscreenExitCount', 0)}, tabSwitches={integrity_metrics.get('tabSwitchCount', 0)}"
+            session.integrity_events.append(
+                IntegrityEvent(
+                    eventType="metrics_snapshot",
+                    timestamp="2026-08-09T00:00:00Z",
+                    detail=detail_str
+                )
+            )
 
         # Append candidate response
         session.conversation_history.append({"role": "candidate", "content": answer.strip()})
@@ -288,23 +335,36 @@ If interview complete (isComplete = true):
 
         except Exception as e:
             logger.error(f"[GEMINI_INTERVIEW_ERROR] Failed to process turn answer: {e}")
+            err_str = str(e)
+            if "403" in err_str or "PERMISSION_DENIED" in err_str or "disabled" in err_str.lower():
+                detail_msg = "Google Generative Language API is disabled or restricted for this project (403 PERMISSION_DENIED). Please enable it at https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview or check API restrictions in Google Cloud Console."
+            elif "401" in err_str or "UNAUTHENTICATED" in err_str or "ACCESS_TOKEN" in err_str:
+                detail_msg = "Gemini API key authentication failed (401 UNAUTHENTICATED). Please verify the GEMINI_API_KEY set in backend/.env."
+            elif "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                detail_msg = "Gemini API rate limit or quota exceeded (429 RESOURCE_EXHAUSTED). Please wait a moment and try again."
+            else:
+                detail_msg = f"AI interviewer is temporarily unavailable: {err_str}"
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI interviewer is temporarily unavailable. Please try again."
+                detail=detail_msg
             )
 
         # Process evaluation
         turn_eval = parsed.get("turnEvaluation") or {}
+        turn_score_num = float(turn_eval.get("score", 7.5))
+        turn_strengths = turn_eval.get("strengths") or []
+        turn_gaps = turn_eval.get("gaps") or []
+
         session.evaluations.append(
             TurnEvaluation(
                 question=session.current_question or f"Question {current_turn}",
                 answer=answer,
                 day=current_turn,
                 topic=session.current_topic or "Technical Turn",
-                score=float(turn_eval.get("score", 7.0)),
+                score=turn_score_num,
                 feedback=turn_eval.get("feedback", ""),
-                strengths_identified=turn_eval.get("strengths") or [],
-                gaps_identified=turn_eval.get("gaps") or []
+                strengths_identified=turn_strengths,
+                gaps_identified=turn_gaps
             )
         )
 
@@ -330,6 +390,9 @@ If interview complete (isComplete = true):
                 "sessionId": session_id,
                 "questionNumber": current_turn,
                 "interviewComplete": True,
+                "score": int(turn_score_num * 10),
+                "strengths": turn_strengths,
+                "gaps": turn_gaps,
                 "feedback": final_fb
             }
 
@@ -355,6 +418,13 @@ If interview complete (isComplete = true):
 
         await session_service.save_session(session)
 
+        next_q_obj = {
+            "id": f"q_{next_q_num}_{uuid.uuid4().hex[:6]}",
+            "text": next_q_text,
+            "category": next_q_topic,
+            "difficulty": next_q_diff
+        }
+
         return {
             "success": True,
             "sessionId": session_id,
@@ -363,7 +433,11 @@ If interview complete (isComplete = true):
             "topic": next_q_topic,
             "difficulty": next_q_diff,
             "isFollowUp": is_followup,
-            "interviewComplete": False
+            "interviewComplete": False,
+            "score": int(turn_score_num * 10),
+            "strengths": turn_strengths,
+            "gaps": turn_gaps,
+            "nextQuestion": next_q_obj
         }
 
     async def log_integrity_event(

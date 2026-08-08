@@ -252,8 +252,11 @@ function extractPageJobDetails(): ExtractedJobContext | null {
       document.querySelector('#job-details')?.textContent?.trim() ||
       document.querySelector('.jobs-description__content')?.textContent?.trim() ||
       document.querySelector('.jobs-description-content')?.textContent?.trim() ||
+      document.querySelector('.jobs-description')?.textContent?.trim() ||
       document.querySelector('.jobs-box__html-content')?.textContent?.trim() ||
-      '';
+      document.querySelector('.jobs-search__job-details')?.textContent?.trim() ||
+      document.querySelector('article')?.textContent?.trim() ||
+      document.body.innerText.substring(0, 3000);
   } else if (!jobTitle && domain.includes('internshala.com')) {
     // Internshala Scraper
     jobTitle =

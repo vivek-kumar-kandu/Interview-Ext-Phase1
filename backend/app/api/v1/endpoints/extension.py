@@ -656,6 +656,10 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
     cand_roles = cand_data.get("targetRoles") or ([cand_data.get("targetRole")] if cand_data.get("targetRole") else [])
     cand_edu = cand_data.get("education") or []
 
+    if not title and description:
+        first_line = description.split('\n')[0].strip()
+        title = first_line[:60] if len(first_line) > 3 else "Technical Position"
+
     if not title and not description:
         logger.error(f"[JOB_MATCH] jobId={job_id} status=failed error='Missing job title and description'")
         raise HTTPException(

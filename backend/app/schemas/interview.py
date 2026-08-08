@@ -100,25 +100,49 @@ class StartInterviewRequest(BaseModel):
     candidateProfile: Dict[str, Any] = Field(default_factory=dict, description="Candidate profile data")
     jobProfile: Dict[str, Any] = Field(default_factory=dict, description="Job details data")
     matchAnalysis: Dict[str, Any] = Field(default_factory=dict, description="Job match breakdown data")
-    expectedLpa: float = Field(..., description="Target expected LPA (e.g. 8, 12, 18, 25)")
+    expectedLpa: float = Field(12.0, description="Target expected LPA (e.g. 8, 12, 18, 25)")
     sessionId: Optional[str] = Field(None, description="Optional existing session ID")
+    job: Optional[Dict[str, Any]] = Field(None, description="Structured job payload")
+    candidate: Optional[Dict[str, Any]] = Field(None, description="Structured candidate payload")
+    interviewPreferences: Optional[Dict[str, Any]] = Field(None, description="Interview focus/preferences")
+
+
+class QuestionModel(BaseModel):
+    id: str = Field(..., description="Unique question identifier")
+    text: str = Field(..., description="Interview question text")
+    category: str = Field("Core Technical Concepts", description="Topic/category")
+    difficulty: str = Field("Mid-level", description="Junior | Mid-level | Senior | Lead")
+    expectedSignals: List[str] = Field(default_factory=list, description="Target technical signals")
+
+
+class SessionSummaryModel(BaseModel):
+    title: str = Field("AI Technical Interview", description="Interview title")
+    focusAreas: List[str] = Field(default_factory=list, description="Target focus areas")
+    difficulty: str = Field("Mid-level", description="Overall difficulty calibration")
+    estimatedQuestions: int = Field(8, description="Estimated question count")
 
 
 class StartInterviewResponse(BaseModel):
     success: bool = True
     sessionId: str
+    interviewId: Optional[str] = None
+    jobId: Optional[str] = None
     questionNumber: int = 1
     question: str
     topic: str = "Core Concepts"
     difficulty: str = "Mid-level"
     totalQuestionsEstimate: int = 8
-    expectedLpa: float
+    expectedLpa: float = 12.0
+    session: Optional[SessionSummaryModel] = None
+    firstQuestion: Optional[QuestionModel] = None
 
 
 class InterviewAnswerRequest(BaseModel):
     sessionId: str
     answer: str
     expectedLpa: Optional[float] = None
+    elapsedSeconds: Optional[int] = None
+    integrityMetrics: Optional[Dict[str, Any]] = None
 
 
 class InterviewAnswerResponse(BaseModel):
@@ -130,13 +154,17 @@ class InterviewAnswerResponse(BaseModel):
     difficulty: Optional[str] = None
     isFollowUp: bool = False
     interviewComplete: bool = False
+    score: Optional[int] = None
+    strengths: List[str] = Field(default_factory=list)
+    gaps: List[str] = Field(default_factory=list)
     feedback: Optional[Dict[str, Any]] = None
+    nextQuestion: Optional[Dict[str, Any]] = None
     errorMessage: Optional[str] = None
 
 
 class IntegrityEventRequest(BaseModel):
     sessionId: str
-    eventType: str = Field(..., description="fullscreen_exit | visibility_hidden | tab_switch | blur")
+    eventType: str = Field(..., description="fullscreen_exit | visibility_hidden | tab_switch | blur | camera_unavailable | microphone_unavailable")
     timestamp: Optional[str] = None
     detail: Optional[str] = None
 
