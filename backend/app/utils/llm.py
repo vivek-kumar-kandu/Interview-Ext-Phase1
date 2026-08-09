@@ -124,6 +124,35 @@ class _AQGeminiWrapper:
                         continue
                     raise
 
+        # Round 3: Fallback models if primary model hit 429 quota limit 0
+        fallback_models = [m for m in ["gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-flash-latest"] if m != self._model]
+        for fallback_model in fallback_models:
+            logger.warning(f"[GEMINI_RETRY] Primary model '{self._model}' quota exhausted. Trying fallback model '{fallback_model}'...")
+            for key in self._keys:
+                client = self._clients.get(key)
+                if not client:
+                    continue
+                try:
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda c=client, m=fallback_model: c.models.generate_content(
+                            model=m,
+                            contents=prompt,
+                        )
+                    )
+
+                    class _Response:
+                        def __init__(self, text: str):
+                            self.content = text
+
+                    return _Response(response.text)
+                except Exception as e:
+                    err_str = str(e)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "401" in err_str or "UNAUTHENTICATED" in err_str:
+                        last_exc = e
+                        continue
+                    raise
+
         assert last_exc is not None
         raise last_exc
 
