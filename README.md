@@ -306,3 +306,5 @@ The compiled Manifest V3 extension will be generated in `frontend/dist`.
   - **Frontend Build**: Compiled & verified in `frontend/dist`.
   - **Chrome Extension Package**: Created at `frontend/interviewos-extension-v1.0.0.zip` ready for Web Store upload.
   - **HTTPS & Public API**: Provided automatically upon launching on Render.
+
+# ai-interview-extension-final
