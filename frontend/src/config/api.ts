@@ -2,7 +2,7 @@ import { env } from '../core/env';
 
 export const API_CONFIG = {
   baseUrl: env.apiBaseUrl,
-  timeout: 60000,
+  timeout: 120000, // 120s timeout to allow Render free tier cold start (50-90s wake up time)
   endpoints: {
     health: '/health',
     interviewStart: '/api/interview/start',

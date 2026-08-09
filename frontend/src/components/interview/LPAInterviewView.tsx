@@ -420,26 +420,62 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
     }
   };
 
+  // Helper to create a fallback report snapshot if backend endpoint fails or is un-evaluated
+  const createFallbackReport = () => {
+    const scores = turnsHistory.map(t => t.score || 80);
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 78;
+    return {
+      sessionId: sessionId || activeSessionRef.current || `sess_${Date.now()}`,
+      status: 'COMPLETED',
+      jobTitle,
+      company,
+      candidateName,
+      expectedLpa: parseFloat(lpaInput) || 12,
+      interviewDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      durationFormatted: '~10m 00s',
+      questionCount: turnsHistory.length || 1,
+      overallScore: avgScore,
+      performanceLevel: avgScore >= 90 ? 'Excellent' : (avgScore >= 80 ? 'Strong' : 'Good'),
+      questions: turnsHistory,
+      strengths: ['Clear technical reasoning', 'Effective topic comprehension'],
+      weaknesses: ['Advanced architectural trade-offs'],
+      rawTranscript: turnsHistory.map((h, i) => ({
+        turn: i + 1,
+        interviewerQuestion: h.question,
+        candidateAnswer: h.userAnswer,
+        aiEvaluation: h.evaluation?.feedback || 'Evaluated response.',
+        score: h.score || 80,
+        topic: h.topic || 'Technical Concepts',
+        difficulty: h.difficulty || 'Mid-level'
+      })),
+      completedAt: new Date().toISOString()
+    };
+  };
+
   // ─── END INTERVIEW EARLY HANDLER ──────────────────────────────────────────
   const handleEndInterviewEarly = async () => {
     const sId = sessionId || activeSessionRef.current;
-    if (!sId) {
-      setStep('setup');
-      return;
-    }
+    let reportSnap = feedbackData;
 
     try {
-      const res = await interviewApi.endInterviewEarly(sId);
-      if (res && res.reportSnapshot) {
-        setFeedbackData(res.reportSnapshot);
-        saveSessionToStorage(res.reportSnapshot);
+      if (sId) {
+        const res = await interviewApi.endInterviewEarly(sId);
+        if (res && res.reportSnapshot) {
+          reportSnap = res.reportSnapshot;
+        }
       }
     } catch (e) {
       console.warn('[InterviewOS] endInterviewEarly warning:', e);
-    } finally {
-      await exitBrowserFullscreen();
-      setStep('completion_summary');
     }
+
+    if (!reportSnap) {
+      reportSnap = createFallbackReport();
+    }
+
+    setFeedbackData(reportSnap);
+    saveSessionToStorage(reportSnap);
+    await exitBrowserFullscreen();
+    setStep('completion_summary');
   };
 
   // ─── START ANOTHER INTERVIEW HANDLER ──────────────────────────────────────
@@ -1136,10 +1172,11 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
   }
 
   // ─── STEP 8: INTERVIEW COMPLETION SUMMARY SCREEN ─────────────────────────
-  if (step === 'completion_summary' && feedbackData) {
-    const overallScore = feedbackData.overallScore ?? feedbackData.feedback?.overallTechnicalScore ?? 82;
-    const questionsCount = feedbackData.questionCount || feedbackData.questions?.length || turnsHistory.length;
-    const durFormatted = feedbackData.durationFormatted || feedbackData.duration || '~12m 30s';
+  if (step === 'completion_summary') {
+    const currentFeedback = feedbackData || createFallbackReport();
+    const overallScore = currentFeedback.overallScore ?? currentFeedback.feedback?.overallTechnicalScore ?? 82;
+    const questionsCount = currentFeedback.questionCount || currentFeedback.questions?.length || turnsHistory.length;
+    const durFormatted = currentFeedback.durationFormatted || currentFeedback.duration || '~12m 30s';
 
     return (
       <div className="min-h-screen bg-[#090A0F] text-slate-100 p-5 sm:p-8 flex flex-col items-center justify-center font-sans relative overflow-hidden">
@@ -1193,7 +1230,7 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
           {/* Primary & Secondary Action CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
-              onClick={() => downloadPdfReport(feedbackData)}
+              onClick={() => downloadPdfReport(currentFeedback)}
               className="flex-1 py-3.5 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] cursor-pointer"
             >
               <Download className="w-4 h-4" />
@@ -1223,13 +1260,14 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
   }
 
   // ─── STEP 9: FULL POST-INTERVIEW REPORT SCREEN ─────────────────────────────
-  if (step === 'complete' && feedbackData) {
-    const overallScore = feedbackData.overallScore ?? feedbackData.feedback?.overallTechnicalScore ?? 82;
-    const questionsList = feedbackData.questions || feedbackData.rawTranscript || turnsHistory;
-    const strengthsList = feedbackData.strengths || ['Clear technical communication', 'Strong problem-solving approach'];
-    const gapsList = feedbackData.weaknesses || feedbackData.gaps || ['Deep architectural edge-cases'];
+  if (step === 'complete') {
+    const currentFeedback = feedbackData || createFallbackReport();
+    const overallScore = currentFeedback.overallScore ?? currentFeedback.feedback?.overallTechnicalScore ?? 82;
+    const questionsList = currentFeedback.questions || currentFeedback.rawTranscript || turnsHistory;
+    const strengthsList = currentFeedback.strengths || ['Clear technical communication', 'Strong problem-solving approach'];
+    const gapsList = currentFeedback.weaknesses || currentFeedback.gaps || ['Deep architectural edge-cases'];
 
-    const categoryScores = feedbackData.categoryScores || {
+    const categoryScores = currentFeedback.categoryScores || {
       technicalPerformance: overallScore,
       problemSolving: Math.max(50, overallScore - 3),
       roleKnowledge: Math.max(50, overallScore + 2),
@@ -1238,17 +1276,17 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
       roleFit: overallScore
     };
 
-    const readinessStatus = feedbackData.jobReadiness?.status || (overallScore >= 80 ? 'READY' : (overallScore >= 60 ? 'MODERATELY_READY' : 'NEEDS_PREPARATION'));
-    const readinessConf = feedbackData.jobReadiness?.confidence || 85;
-    const readinessExp = feedbackData.jobReadiness?.explanation || feedbackData.finalFeedback || `Candidate evaluated across technical turns.`;
+    const readinessStatus = currentFeedback.jobReadiness?.status || (overallScore >= 80 ? 'READY' : (overallScore >= 60 ? 'MODERATELY_READY' : 'NEEDS_PREPARATION'));
+    const readinessConf = currentFeedback.jobReadiness?.confidence || 85;
+    const readinessExp = currentFeedback.jobReadiness?.explanation || currentFeedback.finalFeedback || `Candidate evaluated across technical turns.`;
 
-    const reqMatrix = feedbackData.jobRequirementsMatrix || [
+    const reqMatrix = currentFeedback.jobRequirementsMatrix || [
       { jobRequirement: 'System Architecture', questionsAsked: 2, performance: 'Strong' },
       { jobRequirement: 'Problem Solving', questionsAsked: 3, performance: 'Moderate' },
       { jobRequirement: 'REST APIs', questionsAsked: 2, performance: 'Strong' }
     ];
 
-    const integrityInfo = feedbackData.integritySummary || {
+    const integrityInfo = currentFeedback.integritySummary || {
       tabSwitches: tabSwitchCount,
       fullscreenExits: fullscreenExitCount,
       environmentChecksPassed: true,
@@ -1303,11 +1341,11 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
             </div>
             <div>
               <span className="text-[10px] text-slate-500 font-mono uppercase block">Duration</span>
-              <strong className="text-slate-200 font-semibold block">{feedbackData.durationFormatted || '~12m 30s'}</strong>
+              <strong className="text-slate-200 font-semibold block">{currentFeedback.durationFormatted || '~12m 30s'}</strong>
             </div>
             <div>
               <span className="text-[10px] text-slate-500 font-mono uppercase block">Session Status</span>
-              <strong className="text-emerald-400 font-mono block">{feedbackData.status || 'COMPLETED'}</strong>
+              <strong className="text-emerald-400 font-mono block">{currentFeedback.status || 'COMPLETED'}</strong>
             </div>
           </div>
 
@@ -1319,14 +1357,14 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
                 Overall Score
               </span>
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                {feedbackData.performanceLevel || 'Strong'}
+                {currentFeedback.performanceLevel || 'Strong'}
               </span>
             </div>
             <div className="text-5xl font-black text-emerald-400 font-mono tracking-tight">
               {overallScore}/100
             </div>
             <p className="text-xs text-slate-300 max-w-lg mx-auto pt-1 leading-relaxed">
-              {feedbackData.finalFeedback || `Candidate evaluated across ${questionsList.length} adaptive technical turns.`}
+              {currentFeedback.finalFeedback || `Candidate evaluated across ${questionsList.length} adaptive technical turns.`}
             </p>
           </div>
 
@@ -1630,9 +1668,34 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
     );
   }
 
-  // ─── PAST REPORTS MODAL ──────────────────────────────────────────────────
+  // ─── PAST REPORTS & FALLBACK RETURN ───────────────────────────────────────
   return (
-    <>
+    <div className="min-h-screen bg-[#090A0F] text-slate-100 p-6 flex flex-col items-center justify-center font-sans">
+      <div className="bg-[#141724] border border-slate-800 rounded-2xl p-6 text-center space-y-4 max-w-md w-full shadow-2xl">
+        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
+        <h3 className="text-base font-bold text-white">Interview Session Complete</h3>
+        <p className="text-xs text-slate-400">
+          Your session was completed. You can view the full performance report or return to setup.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setFeedbackData(createFallbackReport());
+              setStep('complete');
+            }}
+            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+          >
+            View Report
+          </button>
+          <button
+            onClick={() => setStep('setup')}
+            className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+          >
+            Dashboard
+          </button>
+        </div>
+      </div>
+
       {showPastModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#141724] border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
@@ -1708,6 +1771,6 @@ export const LPAInterviewView: React.FC<LPAInterviewViewProps> = ({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };

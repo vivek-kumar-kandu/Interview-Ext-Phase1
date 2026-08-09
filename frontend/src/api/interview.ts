@@ -231,6 +231,7 @@ export const interviewApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 120000, // 2 minutes to allow Render cold start & Gemini LLM parsing
       });
       return res;
     } catch (e: any) {
