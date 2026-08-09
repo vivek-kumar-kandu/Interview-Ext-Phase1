@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "InterviewOS — AI Interview Layer",
   "version": "1.0.0",
-  "description": "AI-powered interview assistance, live question context, candidate feedback dashboard, and interview co-pilot for any hiring platform.",
+  "description": "AI-powered technical interview assistant, real-time role context, candidate feedback dashboard, and interview co-pilot.",
   "permissions": [
     "storage",
     "activeTab",
