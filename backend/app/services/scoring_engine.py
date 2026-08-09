@@ -59,8 +59,9 @@ SYNONYM_MAP: Dict[str, str] = {
     "angularjs": "angular"
 }
 
-def normalize_skill_term(term: str) -> str:
-    cleaned = term.strip().lower()
+def normalize_skill_term(term: Any) -> str:
+    from app.utils.helpers import safe_str
+    cleaned = safe_str(term).strip().lower()
     return SYNONYM_MAP.get(cleaned, cleaned)
 
 
@@ -91,18 +92,25 @@ class DeterministicScoringEngine:
             logger.warning("[SCORING_ENGINE] Insufficient job information provided to calculate match.")
             return None
 
-        cand_skills = [s.strip() for s in (candidate_skills or []) if s.strip()]
-        if not cand_skills and not candidate_experience and not candidate_roles:
+        from app.utils.helpers import safe_str, safe_str_list, safe_join
+
+        cand_skills = safe_str_list(candidate_skills)
+        cand_exp_list = safe_str_list(candidate_experience)
+        cand_proj_list = safe_str_list(candidate_projects)
+        cand_roles_list = safe_str_list(candidate_roles)
+        cand_edu_list = safe_str_list(candidate_education)
+
+        if not cand_skills and not cand_exp_list and not cand_roles_list:
             logger.warning("[SCORING_ENGINE] Insufficient candidate profile information to calculate match.")
             return None
 
-        req_skills = [s.strip() for s in (job.skills or []) if s.strip()]
+        req_skills = safe_str_list(job.skills)
         job_title = (job.jobTitle or "Technical Role").strip()
         job_desc = (job.description or "").strip()
 
         if not req_skills:
             from app.services.job_analyzer import job_analyzer_service
-            req_skills = job_analyzer_service.extract_skills_from_job_title_and_desc(job_title, job_desc)
+            req_skills = safe_str_list(job_analyzer_service.extract_skills_from_job_title_and_desc(job_title, job_desc))
 
         if not req_skills and len(job_desc) < 20:
             logger.warning("[SCORING_ENGINE] Insufficient job details/requirements extracted.")
@@ -123,12 +131,12 @@ class DeterministicScoringEngine:
             norm_req = normalize_skill_term(req)
             if norm_req in cand_norm_map:
                 matched_skills.append(cand_norm_map[norm_req])
-                sources = provenance_map.get(norm_req, ["Profile Technical Skills"]) if provenance_map else ["Profile Technical Skills"]
+                sources = safe_str_list(provenance_map.get(norm_req, ["Profile Technical Skills"]) if provenance_map else ["Profile Technical Skills"])
                 evidence_items.append(
                     EvidenceItem(
                         category="Technical Skill Match",
                         title=f"Verified Skill: {req}",
-                        detail=f"Candidate possesses verified competency in {req} supported by {', '.join(sources)}.",
+                        detail=f"Candidate possesses verified competency in {req} supported by {safe_join(', ', sources)}.",
                         sourcePlatform=sources[0] if sources else "Candidate Profile"
                     )
                 )
@@ -160,19 +168,19 @@ class DeterministicScoringEngine:
 
         # 2. Experience Alignment Sub-Score (Weight: 20%)
         req_exp_years = self._extract_exp_years(job.experience or job_desc)
-        cand_exp_years = max(2.0, len(candidate_experience) * 1.5)
+        cand_exp_years = max(2.0, len(cand_exp_list) * 1.5)
         if cand_exp_years >= req_exp_years:
             exp_alignment_pct = 100
         else:
             exp_alignment_pct = int(min(100, max(30, round((cand_exp_years / max(1, req_exp_years)) * 100))))
 
-        if candidate_experience:
+        if cand_exp_list:
             evidence_texts.append(f"Candidate experience depth (~{round(cand_exp_years, 1)} yrs) evaluated against {req_exp_years} yrs requirement.")
 
         # 3. Project Relevance Sub-Score (Weight: 15%)
-        proj_count = len(candidate_projects)
+        proj_count = len(cand_proj_list)
         project_tech_matches = 0
-        cand_proj_str = (" ".join(candidate_projects) + " " + " ".join(candidate_experience)).lower()
+        cand_proj_str = (safe_join(" ", cand_proj_list) + " " + safe_join(" ", cand_exp_list)).lower()
         for req in req_skills:
             if req.lower() in cand_proj_str:
                 project_tech_matches += 1
@@ -186,12 +194,11 @@ class DeterministicScoringEngine:
             project_relevance_pct = int(round(skill_match_pct * 0.6))
 
         # 4. Education Match Sub-Score (Weight: 5%)
-        cand_edu = candidate_education or []
-        edu_str = " ".join(str(e) for e in cand_edu).lower()
+        edu_str = safe_join(" ", cand_edu_list).lower()
         if any(term in edu_str for term in ["computer", "engineering", "b.tech", "b.e", "b.s", "master", "m.tech", "bca", "mca", "degree"]):
             education_pct = 100
             evidence_texts.append("Candidate holds degree aligning with technical requirements.")
-        elif cand_edu:
+        elif cand_edu_list:
             education_pct = 85
         else:
             education_pct = 75
@@ -199,7 +206,7 @@ class DeterministicScoringEngine:
         # 5. Keyword & Responsibility Alignment Sub-Score (Weight: 10%)
         kw_matches = 0
         job_words = set(re.findall(r'\w+', (job_title + " " + job_desc).lower()))
-        cand_words = set(re.findall(r'\w+', (" ".join(cand_skills) + " " + " ".join(candidate_experience) + " " + " ".join(candidate_roles)).lower()))
+        cand_words = set(re.findall(r'\w+', (safe_join(" ", cand_skills) + " " + safe_join(" ", cand_exp_list) + " " + safe_join(" ", cand_roles_list)).lower()))
         overlap = job_words.intersection(cand_words)
         if len(job_words) > 0:
             keyword_pct = int(min(100, max(40, round((len(overlap) / min(20, len(job_words))) * 100))))
@@ -280,8 +287,8 @@ class DeterministicScoringEngine:
 
         # Build human-readable explanation string
         if missing_skills:
-            missing_str = ", ".join(missing_skills[:3])
-            explanation = f"{final_score}% match because candidate satisfies technical requirements for {', '.join(matched_skills[:3]) if matched_skills else 'core skills'}, but lacks {missing_str} experience."
+            missing_str = safe_join(", ", missing_skills[:3])
+            explanation = f"{final_score}% match because candidate satisfies technical requirements for {safe_join(', ', matched_skills[:3]) if matched_skills else 'core skills'}, but lacks {missing_str} experience."
         else:
             explanation = f"{final_score}% match with strong technical alignment across all required competencies for {job_title}."
 
@@ -303,14 +310,15 @@ class DeterministicScoringEngine:
         job_skills: List[str],
         provenance_map: Optional[Dict[str, List[str]]] = None
     ) -> List[DynamicSkillGap]:
-        cand_norm_map: Dict[str, str] = {normalize_skill_term(s): s for s in candidate_skills}
+        from app.utils.helpers import safe_str, safe_str_list
+        cand_norm_map: Dict[str, str] = {normalize_skill_term(s): safe_str(s) for s in safe_str_list(candidate_skills)}
         gaps: List[DynamicSkillGap] = []
 
-        for req in job_skills:
+        for req in safe_str_list(job_skills):
             norm_req = normalize_skill_term(req)
             if norm_req in cand_norm_map:
                 matched_orig = cand_norm_map[norm_req]
-                sources = provenance_map.get(norm_req, ["Candidate Profile"]) if provenance_map else ["Candidate Profile"]
+                sources = safe_str_list(provenance_map.get(norm_req, ["Candidate Profile"]) if provenance_map else ["Candidate Profile"])
                 gaps.append(
                     DynamicSkillGap(
                         skill=req,
@@ -346,21 +354,24 @@ class DeterministicScoringEngine:
         return gaps
 
     def calculate_profile_readiness(self, profile: NormalizedCandidateProfile) -> MetricScore:
+        from app.utils.helpers import safe_str_list, safe_join
         score = 50
         evidence: List[EvidenceItem] = []
 
         if profile.headline and len(profile.headline.strip()) > 3:
             score += 10
             evidence.append(EvidenceItem(category="Profile Completeness", title="Headline Specified", detail=profile.headline, sourcePlatform=profile.platform))
-        if profile.about and len(profile.about.strip()) > 15:
-            score += 10
-            evidence.append(EvidenceItem(category="Profile Completeness", title="Professional Summary Available", detail="Comprehensive summary provided", sourcePlatform=profile.platform))
+        summary_text = getattr(profile, "summary", None) or getattr(profile, "about", None)
+        if summary_text and isinstance(summary_text, str) and len(summary_text.strip()) > 10:
+            score += 5
+            evidence.append(EvidenceItem(category="Profile Completeness", title="Summary Synthesized", detail=summary_text[:100], sourcePlatform=profile.platform))
         if profile.location:
             score += 5
         if profile.skills:
-            sk_gain = min(15, len(profile.skills) * 3)
+            sk_list = safe_str_list(profile.skills)
+            sk_gain = min(15, len(sk_list) * 3)
             score += sk_gain
-            evidence.append(EvidenceItem(category="Skill Breadth", title=f"{len(profile.skills)} Technical Skills Verified", detail=", ".join(profile.skills[:5]), sourcePlatform=profile.platform))
+            evidence.append(EvidenceItem(category="Skill Breadth", title=f"{len(sk_list)} Technical Skills Verified", detail=safe_join(", ", sk_list[:5]), sourcePlatform=profile.platform))
         if profile.experience:
             score += min(10, len(profile.experience) * 2)
         if profile.education:

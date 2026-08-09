@@ -36,7 +36,9 @@ class Settings:
     def GEMINI_API_KEYS(self) -> list[str]:
         _reload_env()
         keys = []
-        for env_var in ["GEMINI_API_KEY", "GEMINI_API_KEYS", "GEMINI_API_KEY_1", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GOOGLE_API_KEY"]:
+        known_vars = ["GEMINI_API_KEY", "GEMINI_API_KEYS", "GOOGLE_API_KEY"]
+        dynamic_vars = [k for k in os.environ.keys() if k.startswith("GEMINI_API_KEY_")]
+        for env_var in known_vars + sorted(dynamic_vars):
             raw_val = os.getenv(env_var)
             if raw_val and raw_val.strip():
                 for sub_key in raw_val.split(","):

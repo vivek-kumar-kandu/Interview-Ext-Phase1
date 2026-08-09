@@ -22,9 +22,10 @@ class QuestionGenerator:
         day_title = day_info.get("title", "Technical Concepts") if day_info else f"Day {day} Concepts"
         context = curriculum_retriever.get_day_context(day)
 
-        company = job.company if job and job.company else "the target company"
-        job_title = job.jobTitle if job and job.jobTitle else "AI Engineer"
-        required_skills = ", ".join(job.skills) if job and job.skills else "FastAPI, LangGraph, RAG, Docker"
+        from app.utils.helpers import safe_join, safe_str
+        company = safe_str(job.company) if job and job.company else "the target company"
+        job_title = safe_str(job.jobTitle) if job and job.jobTitle else "AI Engineer"
+        required_skills = safe_join(", ", job.skills) if job and job.skills else "FastAPI, LangGraph, RAG, Docker"
 
         # Retrieve Breeth Candidate Memories for relevant topic
         memories = []
@@ -39,7 +40,7 @@ class QuestionGenerator:
         except Exception as b_err:
             pass
 
-        memory_ctx = "\n".join([f"- {m}" for m in memories]) if memories else "None available"
+        memory_ctx = safe_join("\n", [f"- {m}" for m in memories]) if memories else "None available"
 
         llm = get_llm(temperature=0.7)
         if llm:
@@ -66,7 +67,7 @@ class QuestionGenerator:
 
 
         # Deterministic fallback question incorporating job posting details
-        tools = ", ".join(day_info.get("tools", ["core tools"])) if day_info else required_skills
+        tools = safe_join(", ", day_info.get("tools", ["core tools"])) if day_info else required_skills
         if turn_index == 1 and job and job.company:
             return (
                 f"I noticed this role at {company} for {job_title} requires strong expertise in {required_skills}. "

@@ -7,7 +7,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # How long to wait (seconds) between retries for 429 RESOURCE_EXHAUSTED
-_RETRY_DELAYS = [30, 60, 90]
+_RETRY_DELAYS = [2, 4, 8]
 
 
 def _parse_retry_delay(err_str: str) -> Optional[float]:
@@ -29,24 +29,32 @@ class _AQGeminiWrapper:
     This wrapper provides an ainvoke() interface matching LangChain's convention
     so the rest of the codebase (lpa_interview_engine, etc.) works unchanged.
 
-    Automatically retries on 429 RESOURCE_EXHAUSTED with exponential backoff.
+    Automatically retries on 429 RESOURCE_EXHAUSTED and rotates through available API keys.
     """
 
     def __init__(self, key: str, model: str, temperature: float = 0.7):
         from google import genai
         from google.oauth2.credentials import Credentials
-        self._client = genai.Client(credentials=Credentials(token=key))
         self._model = model
         self._temperature = temperature
-        logger.info(f"[GEMINI_AQ_WRAPPER] Initialized google.genai.Client with AQ. credentials (model={model})")
+        self._keys = [key]
+        for k in settings.GEMINI_API_KEYS:
+            if k and k not in self._keys:
+                self._keys.append(k)
+        self._clients = {}
+        for k in self._keys:
+            try:
+                self._clients[k] = genai.Client(credentials=Credentials(token=k))
+            except Exception as e:
+                logger.warning(f"[GEMINI_AQ_WRAPPER] Could not init client for key: {e}")
+        logger.info(f"[GEMINI_AQ_WRAPPER] Initialized google.genai.Client with {len(self._clients)} key(s) (model={model})")
 
     async def ainvoke(self, messages: List[Any]) -> Any:
         """
         Accepts a list of LangChain message objects and returns a response
         object with a .content attribute — same interface as ChatGoogleGenerativeAI.
-        Retries automatically on 429 RESOURCE_EXHAUSTED up to 3 times.
+        Rotates across available keys on 429 RESOURCE_EXHAUSTED.
         """
-        # Flatten all message content into a single prompt string
         parts = []
         for m in messages:
             if hasattr(m, "content"):
@@ -57,19 +65,16 @@ class _AQGeminiWrapper:
                 parts.append(str(m))
         prompt = "\n\n".join(parts)
 
-        retry_delays = list(_RETRY_DELAYS)  # local copy so we can patch per-call
         last_exc = None
-        for attempt, delay in enumerate([0] + retry_delays):
-            if delay > 0:
-                logger.warning(
-                    f"[GEMINI_RETRY] 429 quota hit — waiting {delay}s before retry "
-                    f"(attempt {attempt}/{len(retry_delays)})…"
-                )
-                await asyncio.sleep(delay)
+        # Round 1: Try each key immediately
+        for key in self._keys:
+            client = self._clients.get(key)
+            if not client:
+                continue
             try:
                 response = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: self._client.models.generate_content(
+                    lambda c=client: c.models.generate_content(
                         model=self._model,
                         contents=prompt,
                     )
@@ -84,16 +89,43 @@ class _AQGeminiWrapper:
             except Exception as e:
                 err_str = str(e)
                 if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    logger.warning(f"[GEMINI_RETRY] 429 quota hit on key {settings.get_key_fingerprint(key)} — trying next key...")
                     last_exc = e
-                    # Honour the retryDelay from the API response if available
-                    api_delay = _parse_retry_delay(err_str)
-                    if api_delay and attempt < len(retry_delays):
-                        retry_delays[attempt] = max(retry_delays[attempt], api_delay + 5)
-                    continue  # retry
-                raise  # non-429 errors surface immediately
+                    continue
+                raise
+
+        # Round 2: If all keys failed on first attempt, do brief backoffs
+        for delay in [3, 8]:
+            logger.warning(f"[GEMINI_RETRY] All keys rate limited — waiting {delay}s before retry...")
+            await asyncio.sleep(delay)
+            for key in self._keys:
+                client = self._clients.get(key)
+                if not client:
+                    continue
+                try:
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda c=client: c.models.generate_content(
+                            model=self._model,
+                            contents=prompt,
+                        )
+                    )
+
+                    class _Response:
+                        def __init__(self, text: str):
+                            self.content = text
+
+                    return _Response(response.text)
+
+                except Exception as e:
+                    err_str = str(e)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        last_exc = e
+                        continue
+                    raise
 
         assert last_exc is not None
-        raise last_exc  # all retries exhausted
+        raise last_exc
 
 
 class _LangChainGeminiWithRetry:

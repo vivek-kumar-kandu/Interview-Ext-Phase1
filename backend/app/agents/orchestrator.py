@@ -91,15 +91,21 @@ class InterviewOrchestrator:
             avg_eval = sum(ev.score for ev in session.evaluations) / len(session.evaluations)
             readiness_score = int(min(98, max(45, round((avg_eval / 10.0) * 100))))
         else:
+            job_match_val = match_metric.score if match_metric else 70
+            missing_cnt = len(match_metric.missingSkills) if match_metric else 0
             job_readiness = scoring_engine.calculate_job_readiness(
                 profile_readiness_score=profile_readiness.score,
-                job_match_score=match_metric.score,
-                missing_skills_count=len(match_metric.missingSkills)
+                job_match_score=job_match_val,
+                missing_skills_count=missing_cnt
             )
             readiness_score = job_readiness.score
 
-        req_skills = job_obj.skills or (match_metric.matchedSkills + match_metric.missingSkills)
-        return req_skills, cand_skills, match_metric.missingSkills, match_metric.score, readiness_score, match_metric
+        matched_skills = match_metric.matchedSkills if match_metric else []
+        missing_skills = match_metric.missingSkills if match_metric else []
+        match_score = match_metric.score if match_metric else 70
+
+        req_skills = job_obj.skills or (matched_skills + missing_skills)
+        return req_skills, cand_skills, missing_skills, match_score, readiness_score, match_metric
 
     async def process_turn(self, request: InterviewRequest) -> InterviewResponse:
         session_id = request.sessionId
@@ -145,12 +151,18 @@ class InterviewOrchestrator:
             session.days_covered.append(first_day)
 
             # Generate first question tailored to job and candidate
-            question = await question_generator.generate_question(
-                day=first_day,
-                candidate=session.candidate,
-                job=session.job,
-                turn_index=1
-            )
+            try:
+                question = await question_generator.generate_question(
+                    day=first_day,
+                    candidate=session.candidate,
+                    job=session.job,
+                    turn_index=1
+                )
+            except Exception as q_err:
+                logger.warning(f"[ORCHESTRATOR] Question generation fallback notice: {q_err}")
+                role_str = session.job_summary.role if session.job_summary else "Software Engineer"
+                comp_str = session.job_summary.company if session.job_summary else "Target Company"
+                question = f"Regarding the technical requirements for the {role_str} role at {comp_str}, how do you approach architecture and implementation when designing core system components?"
 
             session.current_question = question
             session.questions_asked = 1
@@ -169,8 +181,9 @@ class InterviewOrchestrator:
             first_day_info = curriculum_service.get_day_info(first_day)
             day_title = first_day_info.get("title", "Technical Architecture") if first_day_info else "Technical Architecture"
 
+            from app.utils.helpers import safe_join
             why_asked = (
-                f"• Job requires expertise in {', '.join(req_skills[:2])} for {role} at {company}.\n"
+                f"• Job requires expertise in {safe_join(', ', req_skills[:2])} for {role} at {company}.\n"
                 f"• Curriculum RAG targets module: {day_title}.\n"
                 f"• Evaluating baseline technical depth for initial interview turn."
             )

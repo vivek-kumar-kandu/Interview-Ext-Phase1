@@ -991,9 +991,7 @@ export const SidePanelApp: React.FC = () => {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(99,102,241,0.15),transparent_70%)]" />
           <div className="relative z-10 space-y-4">
             <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-900/60">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
+              <img src="/logo.png" alt="InterviewOS" className="w-16 h-16 rounded-2xl object-cover shadow-2xl shadow-indigo-500/30 border border-white/10" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Welcome to InterviewOS</h1>
@@ -2359,10 +2357,11 @@ export const SidePanelApp: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setExtensionView('profile_not_analyzed')}
-            className="p-1.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 text-slate-300 hover:text-white border border-white/10 transition flex items-center gap-1 text-xs font-semibold"
-            title="Back to Dashboard"
+            aria-label="Back to Dashboard"
+            title="Return to Main Dashboard"
+            className="btn-secondary py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
           >
-            <ChevronLeft className="w-4 h-4 text-slate-300" />
+            <ChevronLeft className="w-4 h-4 text-indigo-400" />
             <span>Back</span>
           </button>
           <AiBotAvatar size="sm" />

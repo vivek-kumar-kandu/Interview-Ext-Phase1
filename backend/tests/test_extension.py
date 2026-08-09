@@ -369,5 +369,63 @@ def test_incomplete_profile_name_and_headline_only():
     assert "experience" in data["missingEvidence"]
 
 
+def test_analyze_job_match_with_dict_profile_fields():
+    """Verify analyze-job-match endpoint succeeds without 500 error when candidate profile contains dict elements."""
+    payload = {
+        "candidateProfile": {
+            "name": "Web Dev Candidate",
+            "skills": [{"skill": "React"}, {"skill": "Node.js"}, {"skill": "JavaScript"}, {"skill": "HTML/CSS"}],
+            "experience": [{"role": "Web Developer Intern", "company": "Alpha Media", "keyWork": "Built frontend UIs"}],
+            "projects": [{"name": "Portfolio", "description": "Personal website"}],
+            "targetRoles": [{"role": "Web Developer Intern", "fitScore": 90}]
+        },
+        "job": {
+            "url": "https://linkedin.com/jobs/view/web-intern-1",
+            "title": "Web Developer Intern",
+            "company": "Alpha Media",
+            "skills": ["React", "JavaScript", "HTML", "CSS"],
+            "description": "Looking for Web Developer Intern proficient in React and JavaScript."
+        }
+    }
+    response = client.post("/api/v1/extension/analyze-job-match", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["matchScore"] > 0
+    assert "React" in data["matchedSkills"] or "JavaScript" in data["matchedSkills"]
 
+def test_safe_join_and_dict_safety():
+    """Verify safe_join converts lists of dicts/strings to joined strings without sequence errors."""
+    from app.utils.helpers import safe_join, safe_str_list
+
+    dict_list = [{"skill": "Python"}, {"name": "FastAPI"}, "Docker", {"role": "Backend Engineer"}]
+    joined = safe_join(", ", dict_list)
+    assert "Python" in joined
+    assert "FastAPI" in joined
+    assert "Docker" in joined
+    assert "Backend Engineer" in joined
+
+    # Test analyze-job-match with heavily nested dict objects in profile and job
+    payload = {
+        "candidateProfile": {
+            "name": "Full Stack Dev",
+            "skills": [{"skill": "Python"}, {"skill": "FastAPI"}, {"skill": "React"}],
+            "experience": [{"role": "Software Engineer", "company": "Tech Corp"}],
+            "projects": [{"name": "AI Assistant", "technologies": [{"skill": "Python"}]}],
+            "targetRoles": [{"targetRole": "Backend Developer"}]
+        },
+        "job": {
+            "url": "https://example.com/jobs/dev-1",
+            "title": "Backend Engineer",
+            "company": "Tech Corp",
+            "skills": [{"skill": "Python"}, "FastAPI"],
+            "requirements": [{"requirement": "FastAPI"}],
+            "description": "Looking for a Backend Engineer with Python and FastAPI skills."
+        }
+    }
+    response = client.post("/api/v1/extension/analyze-job-match", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["matchScore"] >= 50
 

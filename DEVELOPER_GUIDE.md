@@ -1,6 +1,6 @@
 # 🚀 InterviewOS — Developer Architecture, API Flow & Onboarding Guide
 
-Welcome to **InterviewOS**! This handbook is specifically crafted for developers joining the project. It provides an exhaustive breakdown of the platform's features, architecture (from DOM/API ingestion down to session storage and RAG retrieval), known code bugs/pitfalls, and key architectural suggestions for upcoming iterations.
+Welcome to **InterviewOS**! This handbook is specifically crafted for developers joining the project. It provides an exhaustive breakdown of the platform's features, architecture (from DOM/API ingestion down to session storage and RAG retrieval), detailed execution flow charts, known code bugs/pitfalls, and key architectural suggestions for upcoming iterations.
 
 ---
 
@@ -8,332 +8,216 @@ Welcome to **InterviewOS**! This handbook is specifically crafted for developers
 1. [Project Overview & Core Mission](#1-project-overview--core-mission)
 2. [Technology Stack](#2-technology-stack)
 3. [Repository Directory Structure](#3-repository-directory-structure)
-4. [End-to-End API Flow & Data Processes](#4-end-to-end-api-flow--data-processes)
-5. [Complete Feature Catalog](#5-complete-feature-catalog)
-6. [Session Storage & Database Architecture](#6-session-storage--database-architecture)
-7. [Known Bugs, Edge Cases & Code Errors](#7-known-bugs-edge-cases--code-errors)
-8. [Architectural Suggestions & Feature Roadmap](#8-architectural-suggestions--feature-roadmap)
+4. [Complete Feature Catalog](#4-complete-feature-catalog)
+5. [Detailed Step-by-Step Execution Flows](#5-detailed-step-by-step-execution-flows)
+6. [LLM Provider & Orchestration Tier](#6-llm-provider--orchestration-tier)
+7. [Session Storage & Database Architecture](#7-session-storage--database-architecture)
+8. [Known Bugs, Edge Cases & Code Errors](#8-known-bugs-edge-cases--code-errors)
+9. [Architectural Suggestions & Feature Roadmap](#9-architectural-suggestions--feature-roadmap)
 
 ---
 
 ## 🎯 1. Project Overview & Core Mission
 
-**InterviewOS** is an **Enterprise AI Interview Intelligence Platform**. Built as a Manifest V3 Chrome Extension paired with a high-throughput Python FastAPI backend, it provides real-time job context scraping, adaptive technical interviewing, explainable AI rationales, and executive evaluation reporting.
-
-### Core Mission & Key Use Cases:
-1. **Automated Job Detection**: Scrapes and parses target job postings (LinkedIn, Greenhouse, Lever, etc.) in real time when a candidate navigates job boards.
-2. **Context-Aware Adaptive Interviewing**: Synthesizes job skill requirements with candidate profile signals to dynamically plan a technical interview curriculum.
-3. **Explainable AI (XAI)**: Displays multi-stage AI reasoning animations and "Why Was This Question Generated?" accordions on every turn.
-4. **"Mic Drop" Executive Outcome Reporting**: Evaluates technical depth, scoring candidates on a 0–100 scale, generating strengths/weaknesses matrices, PDF reports, and one-click recruiter summaries.
+**InterviewOS** is an **Enterprise AI Technical Interview & Job Intelligence Copilot**. Built as a Manifest V3 Chrome Extension paired with a high-throughput Python FastAPI backend, it provides real-time job context scraping, adaptive technical interviewing, explainable AI rationales, and executive evaluation reporting.
 
 ---
 
 ## 🛠️ 2. Technology Stack
 
 ### Backend Stack (`/backend`)
-
 - **Framework**: Python 3.13 + FastAPI + Pydantic v2 ([main.py](file:///d:/Ai%20Interview%20Ext/backend/app/main.py))
-- **LLM Orchestration**: Google Gemini 1.5 Flash (`langchain-google-genai`) with OpenAI (`gpt-4o-mini`) fallback support via unified factory [`get_llm()`](file:///d:/Ai%20Interview%20Ext/backend/app/utils/llm.py#L8-L40).
+- **LLM Orchestration**: Dual Google Gemini 1.5/Flash engine (`langchain-google-genai` + custom OAuth2 Bearer `_AQGeminiWrapper`) with OpenAI (`gpt-4o-mini`) fallback via unified factory [`get_llm()`](file:///d:/Ai%20Interview%20Ext/backend/app/utils/llm.py#L166-L255).
 - **RAG & Vector Search**: Qdrant (`:memory:` vector store) with JSON curriculum embeddings in [`CurriculumRetriever`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L6-L62).
-- **Session Storage**: Dual-tier [`SessionService`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L10-L75) (Redis via `redis.asyncio` with automatic in-memory dict fallback).
-- **Environment Management**: `python-dotenv` loading [`backend/.env`](file:///d:/Ai%20Interview%20Ext/backend/.env).
-- **Testing**: Pytest + FastAPI TestClient ([`backend/tests/`](file:///d:/Ai%20Interview%20Ext/backend/tests)).
-
-### Frontend Stack (`/frontend`)
-- **Platform**: Chrome Extension Manifest V3 (SidePanel API + Content Scripts + Service Worker).
-- **UI Framework**: React 18 + TypeScript 5 + Tailwind CSS v3 + Lucide Icons.
-- **State Management**: Reactive custom Store subscriber pattern in [`interviewStore`](file:///d:/Ai%20Interview%20Ext/frontend/src/store/interview.store.ts#L87-L224).
-- **Export Utilities**: Custom PDF printer & Clipboard summary generator in [`reportExporter.ts`](file:///d:/Ai%20Interview%20Ext/frontend/src/lib/reportExporter.ts).
-- **Build System**: Vite 6 + PostCSS.
+- **Session Storage**: Dual-tier [`SessionService`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L10-L75) (Async Redis via `redis.asyncio` with in-memory dict fallback).
 
 ---
 
-## 📁 3. Repository Directory Structure
+## ⚡ 4. Complete Feature Catalog
 
-```text
-d:\Ai Interview Ext\
-├── DEVELOPER_GUIDE.md               <-- Complete Developer Architecture & Onboarding Manual
-├── package.json                     <-- Monorepo script runner
-│
-├── backend/
-│   ├── .env                         <-- Environment variables (GEMINI_API_KEY, REDIS_URL)
-│   ├── app/
-│   │   ├── main.py                  <-- FastAPI app entry point & router definitions
-│   │   ├── api/v1/endpoints/
-│   │   │   ├── interview.py         <-- POST /api/interview endpoint handler
-│   │   │   └── extension.py         <-- Chrome extension helper endpoints (/detect-job, /start-job-interview)
-│   │   ├── agents/                  <-- AI Reasoning Engines
-│   │   │   ├── orchestrator.py      <-- Interview state machine & turn process execution
-│   │   │   ├── question_generator.py<-- Curriculum RAG question generator agent
-│   │   │   ├── followup_generator.py<-- Follow-up question generator agent
-│   │   │   ├── evaluator.py         <-- Technical depth & gap scoring evaluator
-│   │   │   └── feedback_generator.py<-- Executive summary & report synthesis engine
-│   │   ├── config/
-│   │   │   └── settings.py          <-- Dataclass environment configuration
-│   │   ├── models/
-│   │   │   └── session.py           <-- SessionState & TurnEvaluation data models
-│   │   ├── schemas/
-│   │   │   ├── interview.py         <-- Pydantic API payload & response schema definitions
-│   │   │   └── extension.py         <-- Extension endpoint request/response contracts
-│   │   ├── services/
-│   │   │   ├── session_service.py   <-- Redis + memory session store service
-│   │   │   ├── job_analyzer.py      <-- Skill extraction service
-│   │   │   ├── candidate_analyzer.py<-- Curriculum planner service
-│   │   │   └── curriculum_service.py<-- RAG curriculum loader
-│   │   └── data/                    <-- JSON datasets (candidates.json, curriculum.json)
-│   ├── tests/                       <-- Pytest suite
-│   └── requirements.txt
-│
-└── frontend/
-    ├── src/
-    │   ├── sidepanel/
-    │   │   └── SidePanelApp.tsx     <-- Main Extension Copilot UI
-    │   ├── components/widget/
-    │   │   └── FloatingWidget.tsx   <-- Injected job notification widget
-    │   ├── content/
-    │   │   └── index.ts             <-- DOM & JSON-LD JobPosting parser content script
-    │   ├── store/
-    │   │   └── interview.store.ts   <-- Reactive state store (Match, Readiness, Roadmap, Thinking)
-    │   ├── api/
-    │   │   └── interview.ts         <-- Axios API client layer with fallback support
-    │   ├── lib/
-    │   │   └── reportExporter.ts    <-- PDF printer & Clipboard copy helpers
-    │   └── types/
-    │       └── feedback.ts          <-- TypeScript type definitions
-    ├── manifest.json                <-- Manifest V3 extension configuration
-    └── package.json
-```
+1. **Automatic Job Context Extraction**: Uses 3-tier extraction in content scripts ([`content/index.ts`](file:///d:/Ai%20Interview%20Ext/frontend/src/content/index.ts)) — JSON-LD Schema.org, CSS selectors, OpenGraph meta.
+2. **Resume & Profile AI Extraction**: PDF/DOCX resume text extraction via [`resume_pipeline.py`](file:///d:/Ai%20Interview%20Ext/backend/app/services/resume_pipeline.py) and Gemini profile parsing.
+3. **Job Match & Readiness Scoring Card**: Mathematical compatibility scores calculated from skill overlap in [`scoring_engine.py`](file:///d:/Ai%20Interview%20Ext/backend/app/services/scoring_engine.py).
+4. **LPA-Calibrated Technical Interview Engine**: Dynamically adapts interview question depth based on expected LPA ([`lpa_interview_engine.py`](file:///d:/Ai%20Interview%20Ext/backend/app/services/lpa_interview_engine.py)).
+5. **Proctoring & Integrity Logging**: Monitors tab visibility changes, fullscreen exits, and device availability via `/api/interview/integrity`.
+6. **Executive Report Card & Export Engine**: Custom PDF report export and one-click recruiter summary clipboard copying.
 
 ---
 
-## 🔄 4. End-to-End API Flow & Data Processes
+## 🔄 5. Detailed Step-by-Step Execution Flows
 
-### 4.1 Visual Architectural Sequence Flow
+### 📍 Flow 1: Real-Time Job Posting Scraping & Detection Flow
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Candidate / Recruiter
-    participant DOM as Web Page (e.g. LinkedIn)
-    participant Content as Content Script (content/index.ts)
-    participant SidePanel as Extension SidePanel App
-    participant FastApi as FastAPI Router (/api/v1)
-    participant Orchestrator as Interview Orchestrator
-    participant RAG as Qdrant / Curriculum RAG
-    participant LLM as Gemini 1.5 Flash (langchain)
-    participant Store as Session Store (Redis / Memory)
-
-    User->>DOM: Navigates to Job Posting page
-    Content->>DOM: Scrapes JSON-LD & DOM selectors
-    Content->>FastApi: POST /api/extension/detect-job
-    FastApi-->>Content: Returns Job summary & detected skills
-    User->>SidePanel: Clicks "Start AI Interview"
-    SidePanel->>FastApi: POST /api/interview (sessionId, candidate, job)
-    FastApi->>Orchestrator: process_turn(request)
-    Orchestrator->>Store: get_session(sessionId)
-    Orchestrator->>RAG: get_day_context(first_day)
-    Orchestrator->>LLM: generate_question(day, candidate, job)
-    LLM-->>Orchestrator: Returns Question 1 + whyAsked
-    Orchestrator->>Store: save_session(SessionState)
-    Orchestrator-->>FastApi: Return InterviewResponse
-    FastApi-->>SidePanel: Renders Match Score, Readiness, & Question 1
-    
-    loop Interview Conversation Turns (Turns 2 to N)
-        User->>SidePanel: Submits Answer
-        SidePanel->>FastApi: POST /api/interview (sessionId, message)
-        FastApi->>Orchestrator: process_turn(request)
-        Orchestrator->>LLM: evaluate_turn(question, answer, day)
-        LLM-->>Orchestrator: Score (0-10), strengths, gaps
-        Orchestrator->>LLM: generate_followup() OR generate_question()
-        LLM-->>Orchestrator: Next question + whyAsked
-        Orchestrator->>Store: save_session(SessionState)
-        Orchestrator-->>FastApi: InterviewResponse (Next question / Progress)
-        FastApi-->>SidePanel: Renders updated Roadmap & Turn
-    end
-
-    Note over Orchestrator: When questions >= 8 and distinct days >= 4
-    Orchestrator->>LLM: generate_feedback(session)
-    LLM-->>Orchestrator: Executive Feedback Report
-    Orchestrator-->>FastApi: InterviewResponse (done=True, feedback)
-    FastApi-->>SidePanel: Renders Executive Report Card & PDF Export
+flowchart TD
+    A[User Opens Job Board Page e.g. LinkedIn/Lever] --> B[Content Script Injected content/index.ts]
+    B --> C{Check Page Content}
+    C -- Tier 1 --> D[Parse JSON-LD script type=application/ld+json]
+    C -- Tier 2 Fallback --> E[Query Portal DOM Selectors .jobs-unified-top-card]
+    C -- Tier 3 Fallback --> F[Query OpenGraph Meta Tags og:title, og:site_name]
+    D --> G[Assemble Raw Job Details URL, Title, Company, Description]
+    E --> G
+    F --> G
+    G --> H[POST /api/extension/detect-job]
+    H --> I[Backend job_analyzer_service.detect_job_profile]
+    I --> J[Extract Required Technical Skills & Role Difficulty]
+    J --> K[Return JobDetectionResponse]
+    K --> L[Broadcast chrome.runtime.sendMessage]
+    L --> M[React Store Updates interviewStore.setDetectedJob]
+    M --> N[SidePanel UI Displays Job Card & Start Interview CTA]
 ```
 
-### 4.2 Detailed API Endpoint Contracts
-
-1. **`GET /api/extension/status`** ([extension.py#L16-L21](file:///d:/Ai%20Interview%20Ext/backend/app/api/v1/endpoints/extension.py#L16-L21)):
-   - **Purpose**: Health check & capability discovery for the extension.
-   - **Response**: `{ "status": "ok", "version": "1.0.0", "enabled": true, "supportedPortals": ["linkedin.com", "greenhouse.io", "lever.co", ...] }`
-
-2. **`POST /api/extension/detect-job`** ([extension.py#L24-L37](file:///d:/Ai%20Interview%20Ext/backend/app/api/v1/endpoints/extension.py#L24-L37)):
-   - **Purpose**: Accepts extracted page metadata and determines whether it represents an active job posting.
-   - **Request Payload**:
-
-     ```json
-     {
-       "url": "https://www.linkedin.com/jobs/view/123456",
-       "domain": "linkedin.com",
-       "jobTitle": "Senior AI Engineer",
-       "company": "TechCorp",
-       "rawDescription": "We are looking for..."
-     }
-     ```
-
-   - **Response Payload**: Returns `JobDetectionResponse` containing `isJobProfile`, parsed `JobAnalysisSummary`, and prompt trigger for extension UI.
-
-3. **`POST /api/interview`** ([interview.py#L8-L21](file:///d:/Ai%20Interview%20Ext/backend/app/api/v1/endpoints/interview.py#L8-L21)):
-   - **Purpose**: Primary stateful endpoint for interview initialization and turn processing.
-   - **Session Initialization Payload**:
-
-     ```json
-     {
-       "sessionId": "session_1723000000",
-       "candidate": { "member": { "id": "cand_01", "name": "Alex Johnson", "jobRole": "AI Engineer" } },
-       "job": { "jobTitle": "AI Engineer", "company": "OpenAI", "skills": ["FastAPI", "Docker", "LangGraph", "Redis"] }
-     }
-     ```
-
-   - **Conversation Turn Response Payload**:
-
-     ```json
-     {
-       "sessionId": "session_1723000000",
-       "message": "Async endpoints in FastAPI run on an asyncio event loop..."
-     }
-     ```
-   - **Response Payload (`InterviewResponse`)**:
-
-     - `reply`: Interviewer response/question text.
-     - `done`: Boolean flag indicating interview completion.
-     - `whyAsked`: Multi-bullet explainability string explaining LLM reasoning.
-     - `matchScore`: Numerical match score (0–100).
-     - `readinessScore`: Numerical readiness score (0–100).
-     - `requiredSkills`: Array of required job skills.
-     - `candidateSkills`: Array of verified candidate skills.
-     - `missingSkills`: Array of missing candidate skills.
-     - `progress`: Object tracking question count, topics covered, remaining topics, and roadmap array.
-     - `feedback`: Executive report object (populated when `done: true`).
+#### Step-by-Step Execution:
+1. **Page Load**: Candidate navigates to a job posting on a supported domain (LinkedIn, Greenhouse, Lever, Workday, Indeed).
+2. **Content Script Scraping**: `content/index.ts` runs automatically. It attempts Tier 1 extraction (`JSON-LD` Schema.org `JobPosting`), falls back to Tier 2 (DOM CSS selectors), and Tier 3 (OpenGraph meta tags).
+3. **Backend Detection Request**: Calls `POST /api/extension/detect-job` with raw page text and metadata.
+4. **Analysis Service**: `job_analyzer_service.detect_job_profile()` identifies whether the page represents a valid job posting, extracts target skills, company, and role summary.
+5. **UI Rendering**: SidePanel updates reactively via `interviewStore`, displaying target job details, match badges, and the "Start AI Technical Interview" CTA button.
 
 ---
 
-## ⚡ 5. Complete Feature Catalog
+### 📍 Flow 2: Resume Upload & Profile AI Extraction Flow
 
-1. **Automatic Job Context Extraction**: Uses a 3-tier extraction hierarchy in content scripts ([`content/index.ts#L45-L101`](file:///d:/Ai%20Interview%20Ext/frontend/src/content/index.ts#L45-L101)):
-   - *Tier 1*: Schema.org `JobPosting` JSON-LD parsing (`<script type="application/ld+json">`).
-   - *Tier 2*: Specialized portal DOM selectors (`.jobs-unified-top-card__job-title`, `h1.app-title`).
-   - *Tier 3*: OpenGraph Meta Tags (`og:site_name`, `document.title`).
-2. **Job Match Score Card (92%)**: Live compatibility badge calculated from skill overlap between job posting specifications and candidate proficiencies.
-3. **Skill Gap Analysis Matrix**: Visual grid comparing `Required Skills`, `Your Skills`, and `Missing Skills`.
-4. **Interview Readiness Metric (88%)**: Dynamic readiness score calculated during curriculum execution.
-5. **Stage-by-Stage AI Thinking Timeline**: Animated progress lifecycle card during AI turn generation ([`interview.store.ts#L79-L85`](file:///d:/Ai%20Interview%20Ext/frontend/src/store/interview.store.ts#L79-L85)):
-   - *Stage 1*: Reading Job Description
-   - *Stage 2*: Retrieving Curriculum RAG
-   - *Stage 3*: Evaluating Previous Answer
-   - *Stage 4*: Planning Next Question
-   - *Stage 5*: Generating Interview Question
-6. **Explainability Accordion ("Why Was This Question Generated?")**: Transparent rationale bullet list provided below every interviewer turn.
-7. **Live Interview Topic Roadmap**: Visual stepper tracking candidate progression across curriculum days (`FastAPI` ➔ `LangGraph` ➔ `RAG` ➔ `Docker` ➔ `Redis`).
-8. **"Mic Drop" Executive Report Card**: Synthesized report containing 0–100 numerical scores, hiring recommendation (`Strong Hire`), top strength, biggest weakness, and next recommended learning topic.
-9. **Export Engine**:
-   - `Download PDF`: Custom styled printable report via [`reportExporter.ts`](file:///d:/Ai%20Interview%20Ext/frontend/src/lib/reportExporter.ts).
-   - `Copy Recruiter Summary`: One-click copy formatted executive summary text for recruiting channels.
+```mermaid
+flowchart TD
+    A[User Uploads Resume PDF/DOCX or Clicks Sync Profile] --> B[Frontend Computes SHA-256 Hash of Document]
+    B --> C[Construct FormData Payload file or resumeText]
+    C --> D[POST /api/candidate/analyze-resume]
+    D --> E[Backend extension.py Handler]
+    E --> F[resume_pipeline.py File Extractor]
+    F --> G[Extract Raw Text from PDF via pypdf/pdfplumber or DOCX]
+    G --> H[candidate_analyzer.analyze_profile_with_gemini]
+    H --> I[Call get_llm to Invoke Gemini LLM Prompt]
+    I --> J[Gemini Returns Structured JSON Candidate Intelligence]
+    J --> K[Return CandidateProfileAnalysis Schema]
+    K --> L[Frontend Extension Calls saveCandidateProfile]
+    L --> M[Write Record to Cloud Firestore Collections]
+    M --> N[Update interviewStore Profile State]
+```
 
 ---
 
-## 💾 6. Session Storage & Database Architecture
+### 📍 Flow 3: Dynamic LPA-Calibrated Technical Interview Turn Flow
 
-### 6.1 Data Models (`SessionState`)
+```mermaid
+flowchart TD
+    subgraph 1. Interview Initialization
+        A[User Clicks Start AI Interview & Selects Expected LPA] --> B[POST /api/interview/start]
+        B --> C[lpa_interview_engine.start_interview]
+        C --> D{Determine LPA Difficulty Calibration}
+        D -- 1-8 LPA --> E1[Junior: Fundamentals & Practical Basics]
+        D -- 9-18 LPA --> E2[Mid-Senior: Architecture & Trade-offs]
+        D -- 19+ LPA --> E3[Staff/Lead: Distributed Systems & Failures]
+        E1 --> F[Construct LLM Prompt Resume Signals + Job Specs + LPA]
+        E2 --> F
+        E3 --> F
+        F --> G[Call get_llm to Generate Question 1]
+        G --> H[Initialize SessionState & Save to Redis 24h TTL]
+        H --> I[Return StartInterviewResponse to SidePanel]
+    end
 
-Defined in [`app/models/session.py`](file:///d:/Ai%20Interview%20Ext/backend/app/models/session.py#L22-L35):
+    subgraph 2. Turn Execution Loop
+        I --> J[Candidate Types & Submits Answer]
+        J --> K[POST /api/interview/answer]
+        K --> L[lpa_interview_engine.process_answer]
+        L --> M[Fetch SessionState from Redis/Memory]
+        M --> N[Log Integrity Events Tab Switches / Fullscreen]
+        N --> O[Call LLM to Evaluate Answer Technical Depth 0-10]
+        O --> P[Append TurnEvaluation to Session]
+        P --> Q{Questions Count >= 8 AND Topics Covered?}
+        Q -- No --> R[Generate Question N+1 + whyAsked Rationale]
+        R --> S[Save Updated Session to Redis]
+        S --> T[Return InterviewAnswerResponse done=False]
+        T --> J
+        Q -- Yes --> U[Trigger Executive Feedback Engine]
+    end
+```
 
-- `session_id`: Unique string identifying the active candidate interview session.
-- `candidate`: `CandidateProfile` object containing member info, past missions, and skill signals.
-- `job`: `JobDetails` object containing job title, company, skills, and raw description.
-- `job_summary`: `JobAnalysisSummary` containing company, role, difficulty, duration.
-- `current_question`: String containing the active question asked to the candidate.
-- `current_day`: Integer curriculum day currently being evaluated.
-- `questions_asked`: Counter tracking total turns elapsed.
-- `days_covered`: List of curriculum days covered so far.
-- `planned_days`: Ordered array of curriculum days planned for this candidate.
-- `evaluations`: List of [`TurnEvaluation`](file:///d:/Ai%20Interview%20Ext/backend/app/models/session.py#L7-L19) objects (score, feedback, key_strengths, identified_gaps).
-- `conversation_history`: List of role/content message dicts.
-- `done`: Boolean flag indicating session completion status.
-- `feedback`: [`FeedbackSchema`](file:///d:/Ai%20Interview%20Ext/backend/app/schemas/interview.py#L38-L59) executive report object.
-
-### 6.2 Dual-Tier Storage Layer (`SessionService`)
-
-Defined in [`app/services/session_service.py`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L10-L75):
-
-1. **Primary Redis Storage**: Connects using `redis.asyncio` via `REDIS_URL`. Serializes `SessionState` to JSON with 24-hour expiration (`setex(f"interview_session:{id}", 86400, json)`).
-2. **In-Memory Storage Fallback**: An in-memory dict `self._memory_sessions` acts as an automatic fail-safe fallback if Redis is offline or unreachable.
-
-### 6.3 Curriculum Vector Storage & RAG (`CurriculumRetriever`)
-
-Defined in [`app/rag/retriever.py`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L6-L62):
-
-- Loads curriculum days from [`curriculum.json`](file:///d:/Ai%20Interview%20Ext/backend/app/data/curriculum.json).
-- Indexes title, day type, tech stack, and content chunks into memory.
-- Provides day-context retrieval ([`get_day_context()`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L33-L45)) and keyword similarity search ([`search_relevant_context()`](file:///d:/Ai%20Interview%20Ext/backend/app/rag/retriever.py#L47-L59)).
-
----
-
-## ⚠️ 7. Known Bugs, Edge Cases & Code Errors
-
-As a developer working on this codebase, take note of the following active bugs and technical gotchas:
-
-### 🐛 Bug 1: Hardcoded Candidate Skills in Orchestrator Skill Matrix
-
-- **Location**: [`app/agents/orchestrator.py#L58-L65`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L58-L65)
-- **Code Snippet**:
-
-  ```python
-  def _compute_skill_analysis(self, session: SessionState):
-      req_skills = session.job.skills if session.job and session.job.skills else ["FastAPI", "Docker", "LangGraph", "Redis"]
-      cand_skills = ["FastAPI", "LangGraph", "Python", "React", "TypeScript"] # <-- HARDCODED
-  ```
-
-- **Issue**: Candidate skills are hardcoded rather than extracted from `session.candidate.keySkills` or parsed resume signals.
-- **Impact**: The UI Skill Gap matrix always displays identical candidate skills regardless of who is interviewing.
-
-### 🐛 Bug 2: Static Match & Readiness Scores in Intermediate Turn Responses
-
-- **Location**: [`app/agents/orchestrator.py#L149-L150`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L149-L150) and [`#L252-L253`](file:///d:/Ai%20Interview%20Ext/backend/app/agents/orchestrator.py#L252-L253)
-- **Issue**: Intermediate responses hardcode `matchScore=92` and `readinessScore=88` instead of recalculating scores dynamically based on `session.evaluations`.
-
-### 🐛 Bug 3: In-Memory Session Isolation Across Multi-Worker Deployments
-
-- **Location**: [`app/services/session_service.py#L16`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L16)
-- **Issue**: If Redis is offline and Uvicorn runs with `--workers 4`, in-memory session dicts are process-isolated. Subsequent candidate turns routed to a different worker process result in `Session Not Found` errors.
-
-### 🐛 Bug 4: DOM Parsing Fragility on Portals
-
-- **Location**: [`frontend/src/content/index.ts#L58-L75`](file:///d:/Ai%20Interview%20Ext/frontend/src/content/index.ts#L58-L75)
-- **Issue**: Specific class selectors like `.job-details-jobs-unified-top-card__job-title` break when LinkedIn or other job portals release frontend updates.
-
-### 🐛 Bug 5: Vector Store Startup Re-indexing Overhead
-
-- **Location**: [`app/config/settings.py#L29`](file:///d:/Ai%20Interview%20Ext/backend/app/config/settings.py#L29)
-- **Issue**: Vector store relies on `:memory:`. Re-indexing happens on every application startup, introducing latency during app boot.
+#### Step-by-Step Execution:
+1. **Start Request**: Candidate selects expected salary target (e.g. ₹14 LPA) and triggers `POST /api/interview/start`.
+2. **LPA Difficulty Calibration**: `lpa_interview_engine.py` categorizes difficulty:
+   - **$\le 8$ LPA**: Core programming fundamentals and practical coding basics.
+   - **$9 - 18$ LPA**: System architecture, trade-offs, debugging, and DB design.
+   - **$\ge 19$ LPA**: High-throughput scalability, distributed system failure modes, and lead trade-offs.
+3. **Question 1 Generation**: Gemini generates Question 1 grounded in the candidate's actual projects and the job posting requirements.
+4. **Session Persistence**: Session stored in Redis (`interview_session:{sessionId}`) with a 24-hour expiration.
+5. **Turn Evaluation Loop (`/interview/answer`)**:
+   - Candidate submits answer text.
+   - Evaluated on a 0–10 score scale by Gemini LLM, recording specific technical strengths and identified gaps.
+   - Checks turn count: If questions $< 8$, generates Question $N+1$ with `whyAsked` explainability notes. If questions $\ge 8$, transitions to final evaluation.
 
 ---
 
-## 🚀 8. Architectural Suggestions & Feature Roadmap
+### 📍 Flow 4: Executive Evaluation & Outcome Reporting Flow
+
+```mermaid
+flowchart TD
+    A[Interview Completed Turn Count >= 8] --> B[lpa_interview_engine Triggers feedback_generator]
+    B --> C[Pass SessionState Evaluations, Candidate & Job to LLM]
+    C --> D[Gemini Synthesizes Executive Feedback Schema]
+    D --> E[Compute Overall Numerical Score 0-100]
+    E --> F[Generate Hiring Verdict Strong Hire / Hire / Pass]
+    F --> G[Generate Strengths Matrix & Weakness Identifiers]
+    G --> H[Generate Next Recommended Learning Roadmap]
+    H --> I[Update SessionState done=True & Save to Redis]
+    I --> J[Return InterviewAnswerResponse done=True + Feedback]
+    J --> K[SidePanel Renders Mic Drop Executive Report Card]
+    K --> L[SidePanel Calls saveInterviewSession to Cloud Firestore]
+    
+    subgraph Export Actions
+        M[User Clicks Download PDF] --> N[reportExporter.exportToPdf Print Window]
+        O[User Clicks Copy Recruiter Summary] --> P[reportExporter.copyRecruiterSummary Clipboard]
+    end
+```
+
+---
+
+## 🤖 6. LLM Provider & Orchestration Tier
+
+Located in [`app/utils/llm.py`](file:///d:/Ai%20Interview%20Ext/backend/app/utils/llm.py), the `get_llm()` factory provides unified access to LLM providers:
+
+```mermaid
+graph TD
+    A["Call get_llm(model_name, api_key_override)"] --> B{"Check Key Format"}
+    B -- "AQ.* (OAuth2 Bearer Token)" --> C["_AQGeminiWrapper"]
+    B -- "AIzaSy* (API Key)" --> D["ChatGoogleGenerativeAI + _LangChainGeminiWithRetry"]
+    B -- "OpenAI Key Present" --> E["ChatOpenAI (gpt-4o-mini)"]
+    C --> F["Async LLM Execution with Auto-Retry"]
+    D --> F
+    E --> F
+```
+
+---
+
+## 💾 7. Session Storage & Database Architecture
+
+### 7.1 Backend Dual-Tier Storage Layer (`SessionService`)
+- **Primary Redis Storage**: Connects using `redis.asyncio` via `REDIS_URL`. Serializes `SessionState` to JSON with 24-hour expiration (`setex(f"interview_session:{id}", 86400, json)`).
+- **In-Memory Storage Fallback**: An in-memory dict `self._memory_sessions` acts as an automatic fail-safe fallback if Redis is offline.
+
+### 7.2 Frontend Cloud Persistence (`firestore.ts`)
+- Persists candidate profiles, job matches, and completed interview transcripts directly to Cloud Firestore:
+  - `users/{userId}/candidateProfiles/{profileId}`
+  - `users/{userId}/jobMatches/{matchId}`
+  - `users/{userId}/interviewSessions/{sessionId}`
+  - `candidates/{candidateId}`
+
+---
+
+## ⚠️ 8. Known Bugs, Edge Cases & Code Errors
+
+> [!WARNING]
+> ### 1. Process Isolation in In-Memory Session Fallback
+> - **Location**: [`app/services/session_service.py#L16`](file:///d:/Ai%20Interview%20Ext/backend/app/services/session_service.py#L16)
+> - **Issue**: If Redis is offline and Uvicorn runs with `--workers 4`, in-memory session dicts are process-isolated.
+
+---
+
+## 🚀 9. Architectural Suggestions & Feature Roadmap
 
 ### High Priority
+1. **Persistent Relational Database (SQLModel / PostgreSQL)**
+2. **Unified Auth Layer (JWT / OAuth2)**
 
-1. **Persistent Relational Database (SQLModel / PostgreSQL)**:
-   - Replace transient session storage with SQLModel / PostgreSQL.
-   - Store candidate profiles, session transcripts, turn evaluations, and aggregate skill gap analytics across time.
-2. **Dynamic Skill Matcher Engine**:
-   - Fix hardcoded skill lists in `orchestrator.py` by integrating real NLP/semantic skill matching between candidate resume data and job posting text.
-
-### Medium Priority
-
-1. **WebSockets / Server-Sent Events (SSE) Streaming**:
-   - Refactor `POST /api/interview` to support `text/event-stream` (SSE). Stream generated LLM tokens word-by-word into the React SidePanel to eliminate response latency.
-2. **Persistent Qdrant Vector Cluster**:
-   - Deploy a standalone Qdrant instance via Docker Compose or Qdrant Cloud. Retain curriculum vectors permanently without relying on `:memory:` re-indexing on container restarts.
-
-### Low Priority
-
-1. **Live Spoken Audio Pipeline**:
-   - Integrate Web Speech API or OpenAI Realtime Voice WebSockets to enable spoken technical interviews alongside text input.
+---
+*Guide prepared for InterviewOS engineering team.*

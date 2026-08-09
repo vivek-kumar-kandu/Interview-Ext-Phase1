@@ -32,16 +32,18 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
       : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-[#12141D] to-[#0A0B0E] border border-indigo-500/30 rounded-2xl shadow-2xl p-6 text-slate-100 font-sans space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-xl animate-fadeIn">
+      <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-obsidian-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-6 text-slate-100 font-sans space-y-6">
         
         {/* Top Header Navigation */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition font-medium"
+            aria-label="Back to Recommendations"
+            title="Return to Recommendations"
+            className="btn-secondary py-1.5 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-indigo-400" />
             <span>Back to Recommendations</span>
           </button>
           <span className="text-[11px] font-mono text-indigo-400 font-bold uppercase tracking-wider">
@@ -60,22 +62,22 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
             </div>
             <div className="text-right shrink-0">
               <div className={`px-3 py-1.5 rounded-xl border text-sm font-extrabold font-mono ${matchColor}`}>
-                {job.matchPercentage}% Match
+                {job.matchPercentage !== undefined && job.matchPercentage !== null ? `${job.matchPercentage}% Match` : 'Not scored'}
               </div>
-              <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-bold border ${badgeBg}`}>
-                {job.careerFit || 'Strong Match'}
+              <span className={`inline-block mt-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${badgeBg}`}>
+                {job.careerFit || 'Role Match'}
               </span>
             </div>
           </div>
-          <p className="text-xs text-slate-300 leading-relaxed italic bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          <p className="text-xs text-slate-300 leading-relaxed italic bg-obsidian-950/80 p-3 rounded-xl border border-white/5">
             "{job.description}"
           </p>
         </div>
 
         {/* Experience Alignment */}
-        <div className="p-4 rounded-xl bg-[#0B0C10] border border-[#232636] space-y-2">
+        <div className="p-4 rounded-xl bg-obsidian-950/80 border border-white/10 space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-indigo-400">
-            <Target className="w-4 h-4" />
+            <Target className="w-4 h-4 text-indigo-400" />
             <span>Experience Alignment</span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed font-normal">
@@ -87,36 +89,31 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* Matching Skills */}
-          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2.5">
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-2.5">
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>Matching Skills ({job.matchingSkills?.length || 0})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {(job.matchingSkills || []).map((sk) => (
-                <span
-                  key={sk}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center gap-1"
-                >
-                  <span className="text-emerald-400">✓</span> {sk}
+                <span key={sk} className="badge-emerald">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  {sk}
                 </span>
               ))}
             </div>
           </div>
 
           {/* Missing / Weak Skills */}
-          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-2.5">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
               <AlertCircle className="w-4 h-4 text-amber-400" />
               <span>Skills to Strengthen ({job.missingSkills?.length || 0})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {(job.missingSkills || []).map((sk) => (
-                <span
-                  key={sk}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1"
-                >
-                  <span className="text-amber-400">•</span> {sk}
+                <span key={sk} className="badge-amber">
+                  • {sk}
                 </span>
               ))}
             </div>
@@ -126,13 +123,13 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
         {/* Resume Strengths for this Role */}
         {job.resumeStrengths && job.resumeStrengths.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-300 uppercase font-mono tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase font-mono tracking-wider">
               <Award className="w-4 h-4 text-indigo-400" />
               <span>Resume Strengths for this Role</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-200">
               {job.resumeStrengths.map((str, idx) => (
-                <li key={idx} className="flex items-start gap-2 bg-slate-900/40 p-2 rounded-lg border border-slate-800/80">
+                <li key={idx} className="flex items-start gap-2 bg-obsidian-950/60 p-2.5 rounded-xl border border-white/5">
                   <span className="text-indigo-400 font-bold">•</span>
                   <span>{str}</span>
                 </li>
@@ -144,13 +141,13 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
         {/* Areas to Improve */}
         {job.areasToImprove && job.areasToImprove.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase font-mono tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase font-mono tracking-wider">
               <AlertCircle className="w-4 h-4 text-amber-400" />
               <span>Areas to Improve</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-200">
               {job.areasToImprove.map((area, idx) => (
-                <li key={idx} className="flex items-start gap-2 bg-slate-900/40 p-2 rounded-lg border border-slate-800/80">
+                <li key={idx} className="flex items-start gap-2 bg-obsidian-950/60 p-2.5 rounded-xl border border-white/5">
                   <span className="text-amber-400 font-bold">•</span>
                   <span>{area}</span>
                 </li>
@@ -164,15 +161,15 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
           
           {/* Interview Prep Topics */}
           {job.interviewPrepTopics && job.interviewPrepTopics.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
-                <BookOpen className="w-4 h-4 text-purple-400" />
+            <div className="p-4 rounded-xl bg-obsidian-950/80 border border-white/10 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
+                <BookOpen className="w-4 h-4 text-indigo-400" />
                 <span>Interview Prep Topics</span>
               </div>
               <ul className="space-y-1 text-xs text-slate-300">
                 {job.interviewPrepTopics.map((topic, idx) => (
                   <li key={idx} className="flex items-center gap-1.5">
-                    <span className="text-purple-400 text-xs">⚡</span>
+                    <span className="text-indigo-400 text-xs">⚡</span>
                     <span>{topic}</span>
                   </li>
                 ))}
@@ -182,14 +179,14 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
 
           {/* Suggested Technologies */}
           {job.suggestedTech && job.suggestedTech.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-teal-300">
-                <Cpu className="w-4 h-4 text-teal-400" />
+            <div className="p-4 rounded-xl bg-obsidian-950/80 border border-white/10 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-cyan-300">
+                <Cpu className="w-4 h-4 text-cyan-400" />
                 <span>Suggested Tech to Prepare</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {job.suggestedTech.map((tech) => (
-                  <span key={tech} className="px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 text-[11px] font-mono border border-teal-500/30">
+                  <span key={tech} className="badge-cyan font-mono">
                     {tech}
                   </span>
                 ))}
@@ -199,10 +196,10 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
         </div>
 
         {/* CTA Action Bar */}
-        <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center gap-3">
+        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center gap-3">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition text-center"
+            className="btn-secondary w-full sm:w-auto py-2.5 px-4 rounded-xl text-xs text-center"
           >
             Close Detail
           </button>
@@ -213,7 +210,7 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
                 onStartInterview(job.jobTitle);
               }
             }}
-            className="w-full sm:flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform hover:scale-[1.01]"
+            className="btn-primary w-full sm:flex-1 py-3 px-5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />
             <span>Start Technical Interview for {job.jobTitle}</span>
@@ -225,3 +222,4 @@ export const JobProfileDetailModal: React.FC<JobProfileDetailModalProps> = ({
     </div>
   );
 };
+

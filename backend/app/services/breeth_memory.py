@@ -41,16 +41,20 @@ class BreethMemoryService:
         if not candidate_id:
             candidate_id = profile.profileId or "cand_default"
 
+        from app.utils.helpers import safe_str, safe_str_list, safe_join
+
         memories: List[str] = []
 
         # 1. Technical Skills evidence
         if profile.technicalSkills:
-            skills_str = ", ".join(profile.technicalSkills[:10])
-            memories.append(f"Candidate demonstrated proficiency in technical skills: {skills_str}.")
+            safe_skills = safe_str_list(profile.technicalSkills[:10])
+            if safe_skills:
+                skills_str = safe_join(", ", safe_skills)
+                memories.append(f"Candidate demonstrated proficiency in technical skills: {skills_str}.")
 
         # 2. Key Headline / Role
         if profile.headline:
-            memories.append(f"Candidate primary headline direction: {profile.headline}.")
+            memories.append(f"Candidate primary headline direction: {safe_str(profile.headline)}.")
 
         # 3. Work Experience evidence
         if profile.experience:
@@ -58,9 +62,10 @@ class BreethMemoryService:
                 if isinstance(exp, str) and exp.strip():
                     memories.append(f"Candidate experience evidence: {exp.strip()}.")
                 elif isinstance(exp, dict):
-                    comp = exp.get("company", "")
-                    role = exp.get("jobTitle", "")
-                    desc = "; ".join(exp.get("description", [])) if isinstance(exp.get("description"), list) else exp.get("description", "")
+                    comp = safe_str(exp.get("company", ""))
+                    role = safe_str(exp.get("jobTitle") or exp.get("role", ""))
+                    desc_val = exp.get("description") or exp.get("keyWork", "")
+                    desc = safe_join("; ", desc_val) if isinstance(desc_val, list) else safe_str(desc_val)
                     memories.append(f"Candidate worked as {role} at {comp}. Details: {desc[:150]}.")
 
         # 4. Project evidence
@@ -69,15 +74,17 @@ class BreethMemoryService:
                 if isinstance(proj, str) and proj.strip():
                     memories.append(f"Candidate project evidence: {proj.strip()}.")
                 elif isinstance(proj, dict):
-                    name = proj.get("name", "Project")
-                    desc = proj.get("description", "")
-                    techs = ", ".join(proj.get("technologies", []))
+                    name = safe_str(proj.get("name", "Project"))
+                    desc = safe_str(proj.get("description", ""))
+                    techs = safe_join(", ", proj.get("technologies", []))
                     memories.append(f"Candidate built project '{name}' using {techs}. Details: {desc[:150]}.")
 
         # 5. Target roles
         if profile.targetRoles:
-            roles_str = ", ".join(profile.targetRoles[:3])
-            memories.append(f"Candidate targeting roles based on evidence: {roles_str}.")
+            safe_roles = safe_str_list(profile.targetRoles[:3])
+            if safe_roles:
+                roles_str = safe_join(", ", safe_roles)
+                memories.append(f"Candidate targeting roles based on evidence: {roles_str}.")
 
         if not memories:
             logger.info(f"[BREETH] No explicit profile evidence memories to store for candidate {candidate_id}")
@@ -101,12 +108,14 @@ class BreethMemoryService:
         if not question or not answer:
             return False
 
+        from app.utils.helpers import safe_str, safe_str_list, safe_join
+
         memories: List[str] = []
         score = getattr(evaluation, "score", None) if evaluation else None
-        feedback = getattr(evaluation, "feedback", "") if evaluation else ""
-        skills_tested = getattr(evaluation, "skillsTested", []) if evaluation else []
+        feedback = safe_str(getattr(evaluation, "feedback", "") if evaluation else "")
+        skills_tested = safe_str_list(getattr(evaluation, "skillsTested", []) if evaluation else [])
 
-        skills_str = ", ".join(skills_tested) if skills_tested else "technical topic"
+        skills_str = safe_join(", ", skills_tested) if skills_tested else "technical topic"
 
         if score is not None:
             if score >= 7.5:

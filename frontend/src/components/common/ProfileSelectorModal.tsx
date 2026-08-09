@@ -175,35 +175,37 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#161822] border border-[#232636] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-xl animate-in fade-in duration-200">
+      <div className="w-full max-w-md bg-obsidian-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#232636] flex items-center justify-between bg-[#0B0C10]">
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-obsidian-950/90">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-400">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white font-display">Candidate Profile Manager</h2>
-              <p className="text-[11px] text-slate-400">Switch or add candidate profile intelligence</p>
+              <p className="text-[11px] text-indigo-400">Switch or add candidate profile intelligence</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            aria-label="Close Profile Manager"
+            title="Close"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="flex border-b border-[#232636] bg-[#12141D] p-1">
+        <div className="flex border-b border-white/10 bg-obsidian-950/80 p-1">
           <button
             onClick={() => setActiveTab('list')}
-            className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition ${
+            className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition ${
               activeTab === 'list'
-                ? 'bg-indigo-600/30 border border-indigo-500/40 text-indigo-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -211,10 +213,10 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('add')}
-            className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition ${
+            className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition ${
               activeTab === 'add'
-                ? 'bg-emerald-600/30 border border-emerald-500/40 text-emerald-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
             }`}
           >
             <PlusCircle className="w-3.5 h-3.5" />

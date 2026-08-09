@@ -91,7 +91,9 @@ export const RecommendedJobsView: React.FC<RecommendedJobsViewProps> = ({
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <button
           onClick={onBackToProfile}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition py-1.5 px-3 rounded-xl bg-obsidian-900 border border-white/10"
+          aria-label="Back to Candidate Profile"
+          title="Return to Candidate Profile"
+          className="btn-secondary py-1.5 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
         >
           <ArrowLeft className="w-4 h-4 text-indigo-400" />
           <span>Back to Profile</span>

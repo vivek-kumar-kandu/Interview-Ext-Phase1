@@ -3,7 +3,7 @@ import { ResumeUploadCard } from '../components/ResumeUploadCard';
 import { CandidateProfileAnalysis } from '../types/profile';
 import { getCandidateProfile } from '../services/firestore';
 import { safeOpenSidePanel } from '../core/chrome';
-import { Sparkles, Briefcase, AlertCircle, CheckCircle, ArrowRight, UserCheck, RefreshCw } from 'lucide-react';
+import { Briefcase, AlertCircle, CheckCircle, ArrowRight, UserCheck, RefreshCw } from 'lucide-react';
 import { interviewApi } from '../api/interview';
 import { formatErrorMessage } from '../lib/errorUtils';
 
@@ -80,9 +80,7 @@ export const PopupApp: React.FC = () => {
         <div className="space-y-4 relative z-10">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+              <img src="/logo.png" alt="InterviewOS" className="w-8 h-8 rounded-xl object-cover shadow-lg shadow-indigo-500/25 border border-white/10" />
               <div>
                 <h1 className="text-base font-bold text-white tracking-tight leading-tight">InterviewOS</h1>
                 <p className="text-[10px] text-indigo-400 font-medium">AI Recruitment Intelligence</p>
@@ -138,9 +136,7 @@ export const PopupApp: React.FC = () => {
         <div className="space-y-4 relative z-10">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+              <img src="/logo.png" alt="InterviewOS" className="w-8 h-8 rounded-xl object-cover shadow-lg shadow-indigo-500/25 border border-white/10" />
               <div>
                 <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
                 <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
@@ -226,9 +222,7 @@ export const PopupApp: React.FC = () => {
       <div className="space-y-4 relative z-10">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+            <img src="/logo.png" alt="InterviewOS" className="w-8 h-8 rounded-xl object-cover shadow-lg shadow-indigo-500/25 border border-white/10" />
             <div>
               <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
               <p className="text-[10px] text-indigo-400 font-medium">Candidate Active</p>

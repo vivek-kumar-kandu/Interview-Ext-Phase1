@@ -42,11 +42,11 @@ class ExtractedJobPayload(BaseModel):
     company: Optional[str] = Field(None, description="Company Name")
     location: Optional[str] = Field(None, description="Job Location")
     description: Optional[str] = Field(None, description="Full or partial raw job description")
-    requirements: List[str] = Field(default_factory=list, description="Explicit job requirements list")
-    skills: List[str] = Field(default_factory=list, description="Extracted required technical/soft skills")
+    requirements: List[Any] = Field(default_factory=list, description="Explicit job requirements list")
+    skills: List[Any] = Field(default_factory=list, description="Extracted required technical/soft skills")
     employmentType: Optional[str] = Field(None, description="Employment type e.g. Full-time, Internship, Remote")
     experienceRequirement: Optional[str] = Field(None, description="Experience requirement e.g. 2+ years")
-    educationRequirements: List[str] = Field(default_factory=list, description="Education requirements e.g. Bachelor's in CS")
+    educationRequirements: List[Any] = Field(default_factory=list, description="Education requirements e.g. Bachelor's in CS")
 
 
 class JobDetectionResponse(BaseModel):

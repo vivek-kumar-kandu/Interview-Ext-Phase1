@@ -648,13 +648,15 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
     logger.info(f"[JOB_EXTRACTION] title={title} company={company} descriptionChars={len(description)}")
     logger.info(f"[JOB_MATCH] jobId={job_id} candidateId={cand_id} status=started")
 
+    from app.utils.helpers import safe_str, safe_str_list, safe_join
+
     # If title is missing or candidate profile is empty, return error response (Requirement 10)
     cand_name = cand_data.get("name") or cand_data.get("candidateName") or "Candidate"
-    cand_skills = cand_data.get("keySkills") or cand_data.get("technicalSkills") or cand_data.get("skills") or []
-    cand_exp = cand_data.get("experience") or []
-    cand_projects = cand_data.get("projects") or []
-    cand_roles = cand_data.get("targetRoles") or ([cand_data.get("targetRole")] if cand_data.get("targetRole") else [])
-    cand_edu = cand_data.get("education") or []
+    cand_skills = safe_str_list(cand_data.get("keySkills") or cand_data.get("technicalSkills") or cand_data.get("skills") or [])
+    cand_exp = safe_str_list(cand_data.get("experience") or [])
+    cand_projects = safe_str_list(cand_data.get("projects") or [])
+    cand_roles = safe_str_list(cand_data.get("targetRoles") or ([cand_data.get("targetRole")] if cand_data.get("targetRole") else []))
+    cand_edu = safe_str_list(cand_data.get("education") or [])
 
     if not title and description:
         first_line = description.split('\n')[0].strip()
@@ -680,14 +682,16 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
         from app.schemas.interview import JobDetails
 
         # Collect or extract skills from job posting
-        job_skills = list(job_data.skills or [])
+        raw_job_skills = safe_str_list(list(job_data.skills or []))
         if job_data.requirements:
-            for req in job_data.requirements:
-                if req and req not in job_skills:
-                    job_skills.append(req)
+            for req in safe_str_list(job_data.requirements):
+                if req and req not in raw_job_skills:
+                    raw_job_skills.append(req)
+
+        job_skills = raw_job_skills
 
         if not job_skills or len(job_skills) < 2:
-            extracted = job_analyzer_service.extract_skills_from_job_title_and_desc(title, description)
+            extracted = safe_str_list(job_analyzer_service.extract_skills_from_job_title_and_desc(title, description))
             for s in extracted:
                 if s not in job_skills:
                     job_skills.append(s)
@@ -696,7 +700,7 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
             jobTitle=title or "Software Engineer",
             company=company,
             skills=job_skills,
-            experience=job_data.experienceRequirement or description,
+            experience=safe_str(job_data.experienceRequirement or description),
             description=description
         )
 
@@ -752,17 +756,20 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
         )
 
         # Strong matches: matched skills + matched role alignment
-        strong_matches = list(match_score.matchedSkills)
+        matched_str_list = safe_str_list(match_score.matchedSkills)
+        missing_str_list = safe_str_list(match_score.missingSkills)
+
+        strong_matches = list(matched_str_list)
         if proj_pct >= 70:
             strong_matches.append(f"Technical Project Alignment ({title})")
 
         gaps_list = [g.dict() for g in skill_gaps]
-        evidence_list = [e.detail for e in match_score.evidence] if match_score.evidence else [
-            f"Candidate satisfies technical requirements for {', '.join(match_score.matchedSkills[:3])}."
+        evidence_list = [safe_str(e.detail) for e in match_score.evidence] if match_score.evidence else [
+            f"Candidate satisfies technical requirements for {safe_join(', ', matched_str_list[:3])}."
         ]
 
-        if match_score.missingSkills:
-            explanation_text = f"{overall_score}% match because candidate satisfies technical requirements for {', '.join(match_score.matchedSkills[:3]) if match_score.matchedSkills else 'core skills'}, but lacks {', '.join(match_score.missingSkills[:2])} experience."
+        if missing_str_list:
+            explanation_text = f"{overall_score}% match because candidate satisfies technical requirements for {safe_join(', ', matched_str_list[:3]) if matched_str_list else 'core skills'}, but lacks {safe_join(', ', missing_str_list[:2])} experience."
         else:
             explanation_text = f"{overall_score}% match with strong technical alignment across all required competencies for {title}."
 
@@ -774,8 +781,8 @@ async def analyze_job_match(request: JobMatchAnalysisRequest) -> JobMatchAnalysi
             matchScore=overall_score,
             breakdown=match_breakdown,
             match=scores,
-            matchedSkills=match_score.matchedSkills,
-            missingSkills=match_score.missingSkills,
+            matchedSkills=matched_str_list,
+            missingSkills=missing_str_list,
             strongMatches=strong_matches,
             skillGaps=gaps_list,
             evidence=evidence_list,

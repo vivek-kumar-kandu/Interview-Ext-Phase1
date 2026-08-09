@@ -375,6 +375,7 @@ class NormalizedCandidateProfile(BaseModel):
     name: str
     headline: Optional[str] = None
     about: Optional[str] = None
+    summary: Optional[str] = None
     location: Optional[str] = None
     skills: List[str] = Field(default_factory=list)
     experience: List[str] = Field(default_factory=list)

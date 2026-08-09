@@ -169,10 +169,12 @@ class CandidateAnalyzer:
             "Return structured JSON only."
         )
 
-        skills_text = ", ".join(profile.skills) if profile.skills else "None extracted from page"
-        exp_text = "; ".join(profile.experience) if profile.experience else "None extracted from page"
-        edu_text = "; ".join(profile.education) if profile.education else "None extracted from page"
-        proj_text = "; ".join(profile.projects) if profile.projects else "None extracted from page"
+        from app.utils.helpers import safe_str_list
+
+        skills_text = ", ".join(safe_str_list(profile.skills)) if profile.skills else "None extracted from page"
+        exp_text = "; ".join(safe_str_list(profile.experience)) if profile.experience else "None extracted from page"
+        edu_text = "; ".join(safe_str_list(profile.education)) if profile.education else "None extracted from page"
+        proj_text = "; ".join(safe_str_list(profile.projects)) if profile.projects else "None extracted from page"
 
         prompt = (
             f"EXACT CANDIDATE PROFILE DATA TO ANALYZE:\n"

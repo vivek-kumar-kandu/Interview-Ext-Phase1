@@ -30,13 +30,13 @@ export const DevVerificationPanel: React.FC<DevVerificationPanelProps> = ({
   const isFirestoreSuccess = !!(profileAnalysis && (profileAnalysis.profileHash || profileAnalysis.resumeHash));
 
   return (
-    <div className="my-3 rounded-lg border border-slate-700 bg-slate-900/90 text-xs shadow-md overflow-hidden font-mono">
+    <div className="my-3 rounded-xl border border-white/10 bg-obsidian-900/90 backdrop-blur-xl text-xs shadow-xl overflow-hidden font-mono">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-slate-800 hover:bg-slate-750 text-emerald-400 font-semibold transition-colors"
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-obsidian-800/90 hover:bg-obsidian-700/90 text-emerald-400 font-semibold transition-colors"
       >
         <span className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           🛠️ Dev Verification Panel (Resume Pipeline)
         </span>
         <span className="text-slate-400">{isOpen ? '▼' : '►'}</span>
