@@ -1394,3 +1394,70 @@ PRODUCTION
 [ ] PROMPTS.md committed to repo root
 [ ] README.md complete with live URLs
 ```
+
+---
+
+## 18. Architecture Summary, Known Bugs and Improvement Suggestions
+
+> Full details in [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md). Below is the condensed reference.
+
+### System Overview
+
+**InterviewOS** is a Chrome Extension (React + TypeScript MV3) backed by a FastAPI Python server using Google Gemini 2.0 Flash for all AI operations. The extension runs on any job portal page, scrapes context, talks to the backend, and conducts adaptive AI technical interviews.
+
+**Three API router groups:**
+- `/api/extension/*` and `/api/candidate/*` — Profile, resume, job match
+- `/api/interview/*` — LPA-calibrated multi-turn interview engine
+- `/api/judge/*` — Hackathon organiser evaluation mode
+
+**Storage layers:**
+- Redis (primary) + in-memory dict (fallback) — interview sessions
+- Firebase Firestore (frontend only) — candidate profiles, job recommendations
+- In-memory dict — resume analysis cache (SHA-256 keyed)
+- Static JSON files — curriculum.json (RAG), candidates.json (judge mode)
+
+---
+
+### Known Bugs (Summary)
+
+| # | Severity | Location | Issue |
+|---|---|---|---|
+| 1 | CRITICAL | LPAInterviewView.tsx | Report button uses local feedbackData instead of fetching backend report_snapshot — PDF missing data |
+| 2 | CRITICAL | session_service.py | Sessions lost on server restart when Redis is not running |
+| 3 | CRITICAL | candidate_analyzer.py | Resume cache is per-process — multi-worker deployments re-analyze same resume |
+| 4 | CRITICAL | backend/.env | Real API keys committed to git — rotate immediately |
+| 5 | HIGH | requirements.txt | python-docx missing — DOCX uploads break on fresh deployments |
+| 6 | MEDIUM | main.py L39-44 | All routers registered twice (/api and /api/v1) — duplicate endpoints |
+| 7 | MEDIUM | lpa_interview_engine.py L86-89 | Score normalization ambiguous — no validation Gemini uses 0-10 scale |
+| 8 | MEDIUM | job_analyzer.py | Hardcoded ~30 tech skills list — misses modern stacks |
+| 9 | MEDIUM | firestore.ts | Firestore save failures are silent — user not notified |
+| 10 | LOW | lpa_interview_engine.py L226 | Adaptive difficulty report uses final difficulty for all turns — inaccurate history |
+
+---
+
+### Top Improvement Suggestions
+
+**High Priority:**
+1. Add SQLite/PostgreSQL persistent session storage (aiosqlite already in requirements.txt)
+2. Move resume cache to Redis (keyed by SHA-256 hash)
+3. Fix report button to always fetch GET /api/interview/report/{sessionId} from backend
+4. Add python-docx to requirements.txt
+5. Rotate all API keys and remove .env from git tracking
+
+**Medium Priority:**
+6. Register each router only once under /api/v1
+7. Replace hardcoded job tech extraction list with Gemini-powered skill extraction
+8. Clamp and validate Gemini scores to 0.0-10.0 range
+9. Track per-turn difficulty in SessionState for accurate reports
+10. Surface Firestore save errors as toast notifications to user
+
+**Nice to Have:**
+- WebSocket streaming for real-time interview turns
+- Candidate analytics dashboard (aggregate score trends, skill progress)
+- Google OAuth login for multi-device profile sync
+- Interview replay mode (review past Q&A with AI evaluations)
+- Multi-language interview support
+- Admin/Organiser web dashboard for Judge Mode
+- Gemini streaming responses (astream instead of ainvoke)
+- Rate limiting on analyze-resume and analyze-profile endpoints
+
