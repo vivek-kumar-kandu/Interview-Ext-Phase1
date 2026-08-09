@@ -22,9 +22,11 @@ class IntegrityEvent(BaseModel):
 
 class SessionState(BaseModel):
     session_id: str
+    status: str = Field(default="COMPLETED", description="COMPLETED | PARTIALLY_COMPLETED | ABANDONED | FAILED")
     candidate: Optional[CandidateProfile] = None
     candidate_profile_dict: Optional[Dict[str, Any]] = None
     job: Optional[JobDetails] = None
+    job_profile_dict: Optional[Dict[str, Any]] = None
     job_summary: Optional[JobAnalysisSummary] = None
     match_analysis: Optional[Dict[str, Any]] = None
     expected_lpa: Optional[float] = None
@@ -35,9 +37,17 @@ class SessionState(BaseModel):
     current_question: Optional[str] = None
     current_topic: Optional[str] = None
     current_difficulty: Optional[str] = None
+    covered_topics: List[str] = Field(default_factory=list)
+    previous_questions: List[str] = Field(default_factory=list)
     pending_followup: bool = False
     conversation_history: List[Dict[str, str]] = Field(default_factory=list)
     evaluations: List[TurnEvaluation] = Field(default_factory=list)
     integrity_events: List[IntegrityEvent] = Field(default_factory=list)
     done: bool = False
     feedback: Optional[FeedbackSchema] = None
+    report_snapshot: Optional[Dict[str, Any]] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration_seconds: Optional[int] = None
+
+

@@ -8,9 +8,10 @@ import { formatErrorMessage } from '../lib/errorUtils';
 
 interface ResumeUploadCardProps {
   onProfileAnalyzed: (profile: any) => void;
+  onExploreJudgeFiles?: () => void;
 }
 
-export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAnalyzed }) => {
+export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAnalyzed, onExploreJudgeFiles }) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [stageMessage, setStageMessage] = useState<string>('');
@@ -229,6 +230,27 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
           </>
         )}
       </button>
+
+      {/* SECONDARY SECTION: Judge Panel Demo */}
+      {onExploreJudgeFiles && (
+        <div className="pt-4 border-t border-white/10 space-y-2 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-amber-400 font-bold text-[11px] uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Files provided by the Judge Panel</span>
+          </div>
+          <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed">
+            Want to see InterviewOS using the evaluation dataset provided for this hackathon?
+          </p>
+          <button
+            type="button"
+            onClick={onExploreJudgeFiles}
+            className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm hover:shadow-amber-500/10"
+          >
+            <span>Explore Judge Files</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -32,19 +32,19 @@ class _AQGeminiWrapper:
     Automatically retries on 429 RESOURCE_EXHAUSTED and rotates through available API keys.
     """
 
-    def __init__(self, key: str, model: str, temperature: float = 0.7):
+    def __init__(self, key: str, model: str, temperature: float = 0.7, keys: Optional[List[str]] = None):
         from google import genai
-        from google.oauth2.credentials import Credentials
         self._model = model
         self._temperature = temperature
-        self._keys = [key]
-        for k in settings.GEMINI_API_KEYS:
+        self._keys = [key] if key else []
+        pool_keys = keys if keys else settings.GEMINI_API_KEYS
+        for k in pool_keys:
             if k and k not in self._keys:
                 self._keys.append(k)
         self._clients = {}
         for k in self._keys:
             try:
-                self._clients[k] = genai.Client(credentials=Credentials(token=k))
+                self._clients[k] = genai.Client(api_key=k)
             except Exception as e:
                 logger.warning(f"[GEMINI_AQ_WRAPPER] Could not init client for key: {e}")
         logger.info(f"[GEMINI_AQ_WRAPPER] Initialized google.genai.Client with {len(self._clients)} key(s) (model={model})")
@@ -53,7 +53,7 @@ class _AQGeminiWrapper:
         """
         Accepts a list of LangChain message objects and returns a response
         object with a .content attribute — same interface as ChatGoogleGenerativeAI.
-        Rotates across available keys on 429 RESOURCE_EXHAUSTED.
+        Rotates across available keys on 429 RESOURCE_EXHAUSTED and 401 UNAUTHENTICATED.
         """
         parts = []
         for m in messages:
@@ -88,15 +88,15 @@ class _AQGeminiWrapper:
 
             except Exception as e:
                 err_str = str(e)
-                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                    logger.warning(f"[GEMINI_RETRY] 429 quota hit on key {settings.get_key_fingerprint(key)} — trying next key...")
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "401" in err_str or "UNAUTHENTICATED" in err_str:
+                    logger.warning(f"[GEMINI_RETRY] Key {settings.get_key_fingerprint(key)} failed ({err_str[:60]}) — trying next key...")
                     last_exc = e
                     continue
                 raise
 
         # Round 2: If all keys failed on first attempt, do brief backoffs
         for delay in [3, 8]:
-            logger.warning(f"[GEMINI_RETRY] All keys rate limited — waiting {delay}s before retry...")
+            logger.warning(f"[GEMINI_RETRY] All keys rate limited / unavailable — waiting {delay}s before retry...")
             await asyncio.sleep(delay)
             for key in self._keys:
                 client = self._clients.get(key)
@@ -119,7 +119,7 @@ class _AQGeminiWrapper:
 
                 except Exception as e:
                     err_str = str(e)
-                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "401" in err_str or "UNAUTHENTICATED" in err_str:
                         last_exc = e
                         continue
                     raise
@@ -167,7 +167,8 @@ def get_llm(
     temperature: float = 0.7,
     model_name: Optional[str] = None,
     api_key_override: Optional[str] = None,
-    provider: Optional[str] = None
+    provider: Optional[str] = None,
+    purpose: Optional[str] = None
 ) -> Optional[Any]:
     """
     Unified LLM Factory.
@@ -175,10 +176,23 @@ def get_llm(
     Supports:
     - AIzaSy... format (legacy simple API keys) → ChatGoogleGenerativeAI (with retry wrapper)
     - AQ. format (new Google AI Studio OAuth2 credentials) → _AQGeminiWrapper (with retry)
+    - Purpose-based key routing ("resume" vs "interview")
 
     Returns None if no valid key is present.
     """
-    gemini_key = api_key_override or settings.GEMINI_API_KEY
+    if api_key_override:
+        gemini_key = api_key_override
+        pool_keys = [api_key_override]
+    elif purpose == "interview":
+        gemini_key = settings.GEMINI_INTERVIEW_API_KEY
+        pool_keys = settings.GEMINI_INTERVIEW_API_KEYS
+    elif purpose == "resume":
+        gemini_key = settings.GEMINI_RESUME_API_KEY
+        pool_keys = settings.GEMINI_RESUME_API_KEYS
+    else:
+        gemini_key = settings.GEMINI_API_KEY
+        pool_keys = settings.GEMINI_API_KEYS
+
     gemini_model = model_name or settings.GEMINI_MODEL
 
     # Auto-upgrade deprecated Gemini 1.5 models to gemini-flash-latest to prevent 404 NOT_FOUND errors
@@ -210,6 +224,7 @@ def get_llm(
 
         logger.info(
             f"[GEMINI_CONFIG]\n"
+            f"purpose={purpose or 'general'}\n"
             f"configured=true\n"
             f"key_length={key_len}\n"
             f"key_fingerprint={fp}\n"
@@ -220,7 +235,7 @@ def get_llm(
         if is_aq:
             # New Google AI Studio AQ. format — use OAuth Bearer wrapper (has built-in retry)
             try:
-                return _AQGeminiWrapper(key=gemini_key, model=gemini_model, temperature=temperature)
+                return _AQGeminiWrapper(key=gemini_key, model=gemini_model, temperature=temperature, keys=pool_keys)
             except Exception as e:
                 logger.warning(f"[GEMINI_AQ_INIT_ERROR] Failed to initialize AQ wrapper: {e}")
         else:

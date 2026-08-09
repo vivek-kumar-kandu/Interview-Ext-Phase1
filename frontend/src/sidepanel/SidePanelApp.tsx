@@ -51,6 +51,7 @@ import { ProfileSelectorModal } from '../components/common/ProfileSelectorModal'
 import { MetricExplainabilityModal } from '../components/common/MetricExplainabilityModal';
 import { AntiCheatingMonitor } from '../components/AntiCheatingMonitor';
 import { RecommendedJobsView } from '../components/RecommendedJobsView';
+import { JudgeDemoView } from '../components/JudgeDemoView';
 import { JobRecommendationResponse } from '../types/jobRecommendation';
 import { saveJobRecommendations, getJobRecommendations } from '../services/firestore';
 
@@ -140,7 +141,7 @@ export function normalizeJobMatchResponse(res: any): CanonicalJobMatchResult | n
 }
 
 
-export type ExtensionView = 'profile_not_analyzed' | 'logged_out' | 'job_confirmation' | 'interview_dashboard' | 'recommended_jobs' | 'job_compare' | 'navigate_to_job' | 'onboarding' | 'lpa_interview';
+export type ExtensionView = 'profile_not_analyzed' | 'logged_out' | 'job_confirmation' | 'interview_dashboard' | 'recommended_jobs' | 'job_compare' | 'navigate_to_job' | 'onboarding' | 'lpa_interview' | 'judge_demo';
 
 
 
@@ -332,7 +333,7 @@ export const SidePanelApp: React.FC = () => {
             }
 
             setExtensionView((prev) =>
-              (prev === 'interview_dashboard' || prev === 'recommended_jobs' || prev === 'navigate_to_job' || prev === 'job_compare') ? prev : 'profile_not_analyzed'
+              (prev === 'interview_dashboard' || prev === 'recommended_jobs' || prev === 'navigate_to_job' || prev === 'job_compare' || prev === 'judge_demo') ? prev : 'profile_not_analyzed'
             );
             getProfileAnalysis(pageDet.profileId).then((existing) => {
               if (existing && (existing.profileReadinessScore ?? 0) > 0 && existing.analysisStatus === 'complete') {
@@ -566,7 +567,7 @@ export const SidePanelApp: React.FC = () => {
       if (errText.includes('429') || errText.includes('quota')) {
         setAnalysisErrorMsg('Gemini API daily quota limit reached. Serving evidence-based profile intelligence.');
       } else if (errText.includes('Failed to fetch') || errText.includes('NetworkError')) {
-        setAnalysisErrorMsg('Backend service unavailable. Please verify FastAPI server is running on http://127.0.0.1:8000.');
+        setAnalysisErrorMsg('Backend service unavailable. Please check your network connection or API server status.');
       } else {
         setAnalysisErrorMsg(errText || 'Failed to generate profile analysis from backend API.');
       }
@@ -910,7 +911,7 @@ export const SidePanelApp: React.FC = () => {
             profileHash: candData.profileHash,
           });
           setExtensionView((prev) =>
-            (prev === 'interview_dashboard' || prev === 'recommended_jobs' || prev === 'navigate_to_job' || prev === 'job_compare') ? prev : 'profile_not_analyzed'
+            (prev === 'interview_dashboard' || prev === 'recommended_jobs' || prev === 'navigate_to_job' || prev === 'job_compare' || prev === 'judge_demo') ? prev : 'profile_not_analyzed'
           );
           setIsScanning(false);
 
@@ -1380,6 +1381,14 @@ export const SidePanelApp: React.FC = () => {
         <div className="text-[11px] text-slate-500 font-mono text-center py-2">
           InterviewOS • Live Job vs Resume Intelligence
         </div>
+      </div>
+    );
+  }
+
+  if (extensionView === 'judge_demo') {
+    return (
+      <div className="min-h-screen bg-[#0B0C10] text-slate-100 p-4 sm:p-6 select-none font-sans">
+        <JudgeDemoView onBack={() => setExtensionView('profile_not_analyzed')} />
       </div>
     );
   }
@@ -2021,6 +2030,7 @@ export const SidePanelApp: React.FC = () => {
                   setProfileAnalysis(prof);
                   setProfileState('analysis_complete');
                 }}
+                onExploreJudgeFiles={() => setExtensionView('judge_demo')}
               />
             </div>
           )}

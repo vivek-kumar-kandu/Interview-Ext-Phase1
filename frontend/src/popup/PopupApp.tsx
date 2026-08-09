@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ResumeUploadCard } from '../components/ResumeUploadCard';
+import { JudgeDemoView } from '../components/JudgeDemoView';
 import { CandidateProfileAnalysis } from '../types/profile';
 import { getCandidateProfile } from '../services/firestore';
 import { safeOpenSidePanel } from '../core/chrome';
@@ -12,6 +13,7 @@ export const PopupApp: React.FC = () => {
   const [activeJob, setActiveJob] = useState<any | null>(null);
   const [jobMatch, setJobMatch] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showJudgeDemo, setShowJudgeDemo] = useState<boolean>(false);
 
   // Load candidate profile from chrome storage or Firestore
   useEffect(() => {
@@ -69,6 +71,14 @@ export const PopupApp: React.FC = () => {
     }
   }, [profileData]);
 
+  if (showJudgeDemo) {
+    return (
+      <div className="w-[380px] min-h-[480px] p-4 bg-obsidian-950 text-slate-100 font-sans border border-white/10 rounded-2xl flex flex-col justify-between select-none shadow-2xl relative overflow-hidden">
+        <JudgeDemoView onBack={() => setShowJudgeDemo(false)} />
+      </div>
+    );
+  }
+
   // STATE 1: No Candidate Profile Uploaded
   if (!profileData) {
     return (
@@ -104,6 +114,7 @@ export const PopupApp: React.FC = () => {
               setProfileData(prof);
               setErrorMessage(null);
             }}
+            onExploreJudgeFiles={() => setShowJudgeDemo(true)}
           />
         </div>
 

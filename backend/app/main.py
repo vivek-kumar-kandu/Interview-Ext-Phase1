@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from app.config import settings
 from app.api.v1.endpoints.interview import router as interview_router
 from app.api.v1.endpoints.extension import router as extension_router
+from app.api.v1.endpoints.judge import router as judge_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -28,17 +29,19 @@ async def quota_exceeded_exception_handler(request: Request, exc: HTTPException)
 # CORS Middleware setup for Chrome Extension & Web clients
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"chrome-extension://.*|http://localhost:\d+|http://127.0.0.1:\d+|https://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include v1 interview and extension endpoints
+# Include v1 interview, extension and judge endpoints
 app.include_router(interview_router, prefix="/api", tags=["Interview"])
 app.include_router(interview_router, prefix="/api/v1", tags=["Interview v1"])
 app.include_router(extension_router, prefix="/api", tags=["Extension"])
 app.include_router(extension_router, prefix="/api/v1", tags=["Extension v1"])
+app.include_router(judge_router, prefix="/api", tags=["Judge Demo"])
+app.include_router(judge_router, prefix="/api/v1", tags=["Judge Demo v1"])
 
 
 @app.get("/", include_in_schema=False)

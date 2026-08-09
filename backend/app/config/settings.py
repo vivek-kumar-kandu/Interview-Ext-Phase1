@@ -28,6 +28,18 @@ class Settings:
         return os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", "")).strip()
 
     @property
+    def GEMINI_RESUME_API_KEY(self) -> str:
+        _reload_env()
+        val = os.getenv("GEMINI_RESUME_API_KEY", "").strip()
+        return val if val else self.GEMINI_API_KEY
+
+    @property
+    def GEMINI_INTERVIEW_API_KEY(self) -> str:
+        _reload_env()
+        val = os.getenv("GEMINI_INTERVIEW_API_KEY", "").strip()
+        return val if val else self.GEMINI_API_KEY
+
+    @property
     def GEMINI_MODEL(self) -> str:
         _reload_env()
         return os.getenv("GEMINI_MODEL", "gemini-flash-latest").strip()
@@ -37,14 +49,50 @@ class Settings:
         _reload_env()
         keys = []
         known_vars = ["GEMINI_API_KEY", "GEMINI_API_KEYS", "GOOGLE_API_KEY"]
-        dynamic_vars = [k for k in os.environ.keys() if k.startswith("GEMINI_API_KEY_")]
+        dynamic_vars = [k for k in os.environ.keys() if k.startswith("GEMINI_API_KEY_") or k.startswith("GEMINI_KEY_")]
         for env_var in known_vars + sorted(dynamic_vars):
             raw_val = os.getenv(env_var)
             if raw_val and raw_val.strip():
                 for sub_key in raw_val.split(","):
                     cleaned = sub_key.strip()
-                    if cleaned and cleaned not in keys:
+                    if cleaned and cleaned not in keys and cleaned != self.GEMINI_MODEL:
                         keys.append(cleaned)
+        return keys
+
+    @property
+    def GEMINI_RESUME_API_KEYS(self) -> list[str]:
+        _reload_env()
+        keys = []
+        known_vars = ["GEMINI_RESUME_API_KEY", "GEMINI_RESUME_API_KEYS"]
+        dynamic_vars = [k for k in os.environ.keys() if k.startswith("GEMINI_RESUME_API_KEY_")]
+        for env_var in known_vars + sorted(dynamic_vars):
+            raw_val = os.getenv(env_var)
+            if raw_val and raw_val.strip():
+                for sub_key in raw_val.split(","):
+                    cleaned = sub_key.strip()
+                    if cleaned and cleaned not in keys and cleaned != self.GEMINI_MODEL:
+                        keys.append(cleaned)
+        for k in self.GEMINI_API_KEYS:
+            if k not in keys:
+                keys.append(k)
+        return keys
+
+    @property
+    def GEMINI_INTERVIEW_API_KEYS(self) -> list[str]:
+        _reload_env()
+        keys = []
+        known_vars = ["GEMINI_INTERVIEW_API_KEY", "GEMINI_INTERVIEW_API_KEYS"]
+        dynamic_vars = [k for k in os.environ.keys() if k.startswith("GEMINI_INTERVIEW_API_KEY_")]
+        for env_var in known_vars + sorted(dynamic_vars):
+            raw_val = os.getenv(env_var)
+            if raw_val and raw_val.strip():
+                for sub_key in raw_val.split(","):
+                    cleaned = sub_key.strip()
+                    if cleaned and cleaned not in keys and cleaned != self.GEMINI_MODEL:
+                        keys.append(cleaned)
+        for k in self.GEMINI_API_KEYS:
+            if k not in keys:
+                keys.append(k)
         return keys
 
     @staticmethod

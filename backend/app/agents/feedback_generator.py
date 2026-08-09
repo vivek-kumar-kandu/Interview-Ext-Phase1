@@ -61,7 +61,7 @@ class FeedbackGenerator:
             f"Recommendation: {recommendation}. Top Strength: {unique_strengths[0] if unique_strengths else 'System Architecture'}."
         )
 
-        llm = get_llm(temperature=0.3)
+        llm = get_llm(temperature=0.3, purpose="interview")
         if llm:
             try:
                 from langchain_core.messages import HumanMessage

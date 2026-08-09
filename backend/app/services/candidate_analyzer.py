@@ -149,7 +149,7 @@ class CandidateAnalyzer:
         keys_to_try = []
         if api_key_override and api_key_override.strip():
             keys_to_try.append(api_key_override.strip())
-        for k in settings.GEMINI_API_KEYS:
+        for k in settings.GEMINI_RESUME_API_KEYS:
             if k and k.strip() and k.strip() not in keys_to_try:
                 keys_to_try.append(k.strip())
 
@@ -490,7 +490,7 @@ class CandidateAnalyzer:
         keys_to_try = []
         if api_key_override and api_key_override.strip():
             keys_to_try.append(api_key_override.strip())
-        for k in settings.GEMINI_API_KEYS:
+        for k in settings.GEMINI_RESUME_API_KEYS:
             if k not in keys_to_try:
                 keys_to_try.append(k)
 

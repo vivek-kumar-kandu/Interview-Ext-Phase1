@@ -10,13 +10,7 @@ const removeModulePreloadPlugin = (): Plugin => ({
     return html.replace(/<link rel="(modulepreload|preload)"[^>]*>/g, '');
   },
   renderChunk(code: string, chunk) {
-    let output = code.replace(
-      /const __vitePreload = [^;]+;/g,
-      'const __vitePreload = function(baseModule) { return baseModule(); };'
-    ).replace(
-      /function __vitePreload\([^)]*\)\s*\{[\s\S]*?\}/g,
-      'function __vitePreload(baseModule) { return baseModule(); }'
-    );
+    let output = code;
     if (chunk.fileName.endsWith('content.js') || chunk.name === 'content') {
       const trimmed = output.trim();
       if (!trimmed.startsWith('(()') && !trimmed.startsWith('(function')) {

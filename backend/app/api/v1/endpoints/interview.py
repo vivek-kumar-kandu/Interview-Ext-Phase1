@@ -68,15 +68,61 @@ async def log_integrity_event(request: IntegrityEventRequest) -> Dict[str, Any]:
     )
 
 
+@router.get("/interview/report/{session_id}", status_code=status.HTTP_200_OK)
+@router.post("/interview/report/{session_id}", status_code=status.HTTP_200_OK)
+@router.post("/extension/interview/report/{session_id}", status_code=status.HTTP_200_OK)
+async def get_interview_report(session_id: str) -> Dict[str, Any]:
+    """
+    Idempotently returns the stored report snapshot for an interview session with zero additional LLM cost.
+    """
+    return await lpa_interview_engine.get_session_report(session_id)
+
+
+@router.post("/interview/end/{session_id}", status_code=status.HTTP_200_OK)
+@router.post("/extension/interview/end/{session_id}", status_code=status.HTTP_200_OK)
+async def end_interview_early(session_id: str) -> Dict[str, Any]:
+    """
+    Terminates an active interview early (e.g. candidate closes interview) and generates report snapshot.
+    """
+    return await lpa_interview_engine.end_interview_early(session_id)
+
+
 @router.post("/interview", response_model=InterviewResponse, status_code=status.HTTP_200_OK)
 async def process_legacy_interview_turn(request: InterviewRequest) -> InterviewResponse:
     """
-    Legacy stateful endpoint handler for backward compatibility.
+    Stateful endpoint handler conforming to Technical Specification POST /api/interview.
+    Supports both normal candidate flow and organiser hackathon evaluation sessions.
     """
     try:
+        from app.services.judge_interview_engine import judge_interview_engine, _JUDGE_SESSIONS
+        cand_dict = request.candidate.dict() if (request.candidate and hasattr(request.candidate, "dict")) else (request.candidate or {})
+        is_organiser_cand = bool(
+            cand_dict.get("member") or
+            cand_dict.get("missions") or
+            (request.sessionId and request.sessionId in _JUDGE_SESSIONS)
+        )
+
+        if is_organiser_cand:
+            session_id = request.sessionId
+            if request.message:
+                res = await judge_interview_engine.process_turn(session_id=session_id, candidate_answer=request.message)
+            else:
+                cand_id = cand_dict.get("member", {}).get("id") or cand_dict.get("id")
+                res = await judge_interview_engine.start_session(session_id=session_id, candidate_id=cand_id, candidate_data=cand_dict)
+            
+            fb = None
+            if res.get("done") and res.get("feedback"):
+                fb = res["feedback"]
+            return InterviewResponse(
+                reply=res.get("reply", "Evaluation turn complete."),
+                done=res.get("done", False),
+                feedback=fb
+            )
+
         return await interview_orchestrator.process_turn(request)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Interview turn processing failed: {str(e)}"
         )
+

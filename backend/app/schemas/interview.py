@@ -159,12 +159,14 @@ class InterviewAnswerResponse(BaseModel):
     gaps: List[str] = Field(default_factory=list)
     feedback: Optional[Dict[str, Any]] = None
     nextQuestion: Optional[Dict[str, Any]] = None
+    questions: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    candidateName: Optional[str] = None
     errorMessage: Optional[str] = None
 
 
 class IntegrityEventRequest(BaseModel):
     sessionId: str
-    eventType: str = Field(..., description="fullscreen_exit | visibility_hidden | tab_switch | blur | camera_unavailable | microphone_unavailable")
+    eventType: str = Field(..., description="FULLSCREEN_EXIT | FULLSCREEN_RETURNED | TAB_SWITCH | TAB_RETURNED | WINDOW_BLUR | WINDOW_FOCUS")
     timestamp: Optional[str] = None
     detail: Optional[str] = None
 

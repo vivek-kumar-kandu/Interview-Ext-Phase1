@@ -90,7 +90,7 @@ class GeminiProvider(AIProvider):
         from app.utils.llm import get_llm
         from langchain_core.messages import SystemMessage, HumanMessage
 
-        keys_to_try = settings.GEMINI_API_KEYS
+        keys_to_try = settings.GEMINI_RESUME_API_KEYS
         if not keys_to_try:
             raise RuntimeError("No Gemini API key available")
 
@@ -201,7 +201,7 @@ class GeminiProvider(AIProvider):
         from app.utils.llm import get_llm
         from langchain_core.messages import HumanMessage
 
-        llm = get_llm(temperature=0.7)
+        llm = get_llm(temperature=0.7, purpose="interview")
         if not llm:
             raise RuntimeError("Gemini LLM unavailable for question generation")
 

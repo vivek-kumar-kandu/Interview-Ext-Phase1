@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -39,45 +40,66 @@ def test_interview_flow_start_and_turns():
         "signals": {"commitDays": 31, "missionsCompleted": 31, "missionsFirstTry": 30}
     }
 
-    # 1. Start Interview
-    start_payload = {
-        "sessionId": session_id,
-        "candidate": candidate_payload
-    }
+    mock_llm = AsyncMock()
+    # 1. Initial turn question
+    mock_llm.ainvoke.return_value.content = '{"question": "Explain embeddings.", "topic": "Embeddings", "difficulty": "Junior"}'
 
-    res = client.post("/api/interview", json=start_payload)
-    assert res.status_code == 200
-    data = res.json()
-    assert "reply" in data
-    assert data["done"] is False
+    with patch("app.utils.llm._AQGeminiWrapper.ainvoke", new=mock_llm.ainvoke), \
+         patch("app.utils.llm._LangChainGeminiWithRetry.ainvoke", new=mock_llm.ainvoke):
 
-    # 2. Perform 8 conversation turns to reach completion criteria
-    turn_answers = [
-        "Embeddings convert text into dense vectors representing semantic meaning in vector space.",
-        "Vector databases use HNSW or IVF indexes to perform efficient nearest neighbor similarity search.",
-        "RAG combines document retrieval from vector stores with LLM prompt context to answer queries accurately.",
-        "Function calling allows LLMs to return structured JSON parameters matching a predefined function schema.",
-        "LangChain agents use reasoning loops like ReAct to select tools dynamically based on user intent.",
-        "Multi-agent orchestration coordinates specialized agents via state graphs or supervisor patterns.",
-        "MCP provides standardized protocols for connecting model context with external services.",
-        "Production deployment requires monitoring latency, observing token costs, and containerizing with Docker."
-    ]
-
-    for turn_idx, answer in enumerate(turn_answers, start=1):
-        turn_payload = {
+        # 1. Start Interview
+        start_payload = {
             "sessionId": session_id,
-            "message": answer
+            "candidate": candidate_payload
         }
-        res = client.post("/api/interview", json=turn_payload)
+
+        res = client.post("/api/interview", json=start_payload)
         assert res.status_code == 200
         data = res.json()
         assert "reply" in data
+        assert data["done"] is False
 
-    # Final response after 8+ questions across 4+ days should be done with feedback
-    assert data["done"] is True
-    assert "feedback" in data
-    feedback = data["feedback"]
-    assert "summary" in feedback
-    assert isinstance(feedback["strengths"], list)
-    assert isinstance(feedback["gaps"], list)
-    assert isinstance(feedback["next"], list)
+        # 2. Perform 8 conversation turns
+        turn_answers = [
+            "Embeddings convert text into dense vectors representing semantic meaning in vector space.",
+            "Vector databases use HNSW or IVF indexes to perform efficient nearest neighbor similarity search.",
+            "RAG combines document retrieval from vector stores with LLM prompt context to answer queries accurately.",
+            "Function calling allows LLMs to return structured JSON parameters matching a predefined function schema.",
+            "LangChain agents use reasoning loops like ReAct to select tools dynamically based on user intent.",
+            "Multi-agent orchestration coordinates specialized agents via state graphs or supervisor patterns.",
+            "MCP provides standardized protocols for connecting model context with external services.",
+            "Production deployment requires monitoring latency, observing token costs, and containerizing with Docker."
+        ]
+
+        for turn_idx, answer in enumerate(turn_answers, start=1):
+            if turn_idx < len(turn_answers):
+                mock_llm.ainvoke.return_value.content = '{"isComplete": false, "turnEvaluation": {"score": 8.0, "feedback": "Good response."}, "nextQuestion": {"question": "Next technical concept?", "topic": "AI", "difficulty": "Mid-level"}}'
+            else:
+                mock_llm.ainvoke.return_value.content = '''{
+                    "isComplete": true,
+                    "turnEvaluation": {"score": 9.0, "feedback": "Comprehensive answer."},
+                    "finalFeedback": {
+                        "summary": "Outstanding technical performance across all topics.",
+                        "strengths": ["Vector Search", "RAG Architecture", "LangChain Agents"],
+                        "gaps": ["Minor edge cases in MCP"],
+                        "next": ["Advanced multi-agent state graphs"]
+                    }
+                }'''
+
+            turn_payload = {
+                "sessionId": session_id,
+                "message": answer
+            }
+            res = client.post("/api/interview", json=turn_payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert "reply" in data
+
+        assert data["done"] is True
+        assert "feedback" in data
+        feedback = data["feedback"]
+        assert "summary" in feedback
+        assert isinstance(feedback["strengths"], list)
+        assert isinstance(feedback["gaps"], list)
+        assert isinstance(feedback["next"], list)
+

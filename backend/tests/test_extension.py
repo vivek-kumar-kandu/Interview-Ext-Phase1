@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -103,9 +104,19 @@ def test_analyze_candidate_profile_endpoint():
             "about": "10 years experience building autonomous mobile robots and edge vision systems."
         }
     }
-    response = client.post("/api/v1/candidate/analyze-profile", json=payload)
-    assert response.status_code in (200, 429)
-    if response.status_code == 200:
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value.content = '''{
+        "summary": "Sarah Connor is a Robotics Engineer.",
+        "candidateSummary": "Sarah Connor is a Robotics Engineer.",
+        "technicalSkills": ["ROS2", "PyTorch", "C++", "Edge AI"],
+        "softSkills": ["Problem Solving"],
+        "overallReadiness": 90,
+        "targetRoles": [{"role": "Robotics Engineer", "fitScore": 90}],
+        "roleFitRankings": [{"role": "Robotics Engineer", "fitScore": 90}]
+    }'''
+    with patch("app.services.candidate_analyzer.get_llm", return_value=mock_llm):
+        response = client.post("/api/v1/candidate/analyze-profile", json=payload)
+        assert response.status_code == 200
         data = response.json()
         assert data["candidateName"] == "Sarah Connor"
         assert data["analysisStatus"] == "complete"
@@ -126,9 +137,19 @@ def test_extension_analyze_profile_alias_endpoint():
             "about": "Experienced web engineer crafting scalable cloud architectures."
         }
     }
-    response = client.post("/api/v1/extension/analyze-profile", json=payload)
-    assert response.status_code in (200, 429)
-    if response.status_code == 200:
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value.content = '''{
+        "summary": "Alex Chen is a web architect.",
+        "candidateSummary": "Alex Chen is a web architect.",
+        "technicalSkills": ["React", "TypeScript", "Node.js", "GraphQL"],
+        "softSkills": ["Leadership"],
+        "overallReadiness": 88,
+        "targetRoles": [{"role": "Web Architect", "fitScore": 88}],
+        "roleFitRankings": [{"role": "Web Architect", "fitScore": 88}]
+    }'''
+    with patch("app.services.candidate_analyzer.get_llm", return_value=mock_llm):
+        response = client.post("/api/v1/extension/analyze-profile", json=payload)
+        assert response.status_code == 200
         data = response.json()
         assert data["candidateName"] == "Alex Chen"
         assert data["analysisStatus"] == "complete"

@@ -42,7 +42,7 @@ class QuestionGenerator:
 
         memory_ctx = safe_join("\n", [f"- {m}" for m in memories]) if memories else "None available"
 
-        llm = get_llm(temperature=0.7)
+        llm = get_llm(temperature=0.7, purpose="interview")
         if llm:
             try:
                 from langchain_core.messages import HumanMessage

@@ -19,7 +19,7 @@ class EvaluatorEngine:
         day_info = curriculum_service.get_day_info(day)
         day_title = day_info.get("title", f"Day {day}") if day_info else f"Day {day}"
 
-        llm = get_llm(temperature=0.2)
+        llm = get_llm(temperature=0.2, purpose="interview")
         if llm:
             try:
                 from langchain_core.messages import SystemMessage, HumanMessage

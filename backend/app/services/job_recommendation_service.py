@@ -124,7 +124,7 @@ class JobRecommendationService:
         from app.utils.llm import get_llm
         from langchain_core.messages import SystemMessage, HumanMessage
 
-        keys_to_try = [api_key_override] if api_key_override else settings.GEMINI_API_KEYS
+        keys_to_try = [api_key_override] if api_key_override else settings.GEMINI_RESUME_API_KEYS
         keys_to_try = [k for k in keys_to_try if k]
         if not keys_to_try:
             return None
