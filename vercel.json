@@ -6,7 +6,7 @@
         },
         {
             "source": "/(.*)",
-            "destination": "/index.html"
+            "destination": "/sidepanel.html"
         }
     ],
     "buildCommand": "cd frontend && npm install && npm run build",
