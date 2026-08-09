@@ -1,15 +1,48 @@
 .btn-primary {
-  @apply bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-indigo-600/20 active:scale-[0.98];
+  @apply bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/35 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:transform-none;
 }
 
 .btn-secondary {
-  @apply bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-4 py-2 rounded-lg border border-slate-700 transition-all duration-200 active:scale-[0.98];
+  @apply bg-obsidian-800/80 hover:bg-obsidian-700/90 text-slate-200 font-semibold px-4 py-2 rounded-xl border border-white/10 hover:border-indigo-500/30 transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
 
 .btn-ghost {
-  @apply hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 font-medium px-3 py-1.5 rounded-lg transition-all duration-150;
+  @apply text-slate-400 hover:text-slate-100 hover:bg-white/5 font-medium px-3 py-1.5 rounded-lg transition-all duration-150 active:scale-[0.98];
+}
+
+.btn-cyan {
+  @apply bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-cyan-600/25 hover:-translate-y-0.5 active:scale-[0.98];
 }
 
 .input-field {
-  @apply bg-slate-900/80 border border-slate-800 focus:border-indigo-500 text-slate-100 placeholder-slate-500 rounded-lg px-3.5 py-2 text-sm outline-none transition-all duration-200 focus:ring-1 focus:ring-indigo-500;
+  @apply bg-obsidian-900/90 border border-white/10 focus:border-indigo-500/80 text-slate-100 placeholder-slate-500 rounded-xl px-3.5 py-2 text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60;
 }
+
+.glass-surface {
+  @apply bg-obsidian-900/70 backdrop-blur-xl border border-white/10 rounded-2xl;
+}
+
+.glass-card-interactive {
+  @apply bg-obsidian-900/70 backdrop-blur-xl border border-white/10 hover:border-indigo-500/30 hover:bg-obsidian-800/80 rounded-2xl transition-all duration-200 shadow-lg shadow-black/20 hover:-translate-y-0.5;
+}
+
+.badge-emerald {
+  @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5;
+}
+
+.badge-amber {
+  @apply bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5;
+}
+
+.badge-indigo {
+  @apply bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5;
+}
+
+.badge-rose {
+  @apply bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5;
+}
+
+.badge-cyan {
+  @apply bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5;
+}
+

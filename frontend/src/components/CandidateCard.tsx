@@ -1,6 +1,7 @@
 import React from 'react';
 import { CandidateProfileAnalysis } from '../types/profile';
-import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertCircle, RefreshCw, Award, Briefcase, GraduationCap } from 'lucide-react';
+import { formatErrorMessage } from '../lib/errorUtils';
 
 interface CandidateCardProps {
   analysis: CandidateProfileAnalysis;
@@ -14,18 +15,18 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
 
   if (isError) {
     return (
-      <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-slate-900 border border-rose-500/40 text-slate-100 shadow-xl space-y-4 font-sans">
+      <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-obsidian-900/90 backdrop-blur-xl border border-rose-500/30 text-slate-100 shadow-xl space-y-4 font-sans">
         <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>Couldn't analyze resume</span>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          {analysis.errorMessage || "Resume analysis could not be completed."}
+          {formatErrorMessage(analysis.errorMessage, "Resume analysis could not be completed.")}
         </p>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition flex items-center justify-center gap-2"
+            className="btn-secondary w-full py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Retry Analysis</span>
@@ -44,10 +45,10 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
 
   if (isIncomplete) {
     return (
-      <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-slate-900 border border-amber-500/40 text-slate-100 shadow-xl space-y-4 font-sans">
+      <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-obsidian-900/90 backdrop-blur-xl border border-amber-500/30 text-slate-100 shadow-xl space-y-4 font-sans">
         <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Not enough profile information</span>
+          <span>Not enough profile evidence</span>
         </div>
         <div className="space-y-1">
           <h3 className="text-base font-bold text-white">{analysis.candidateName || 'Candidate'}</h3>
@@ -55,14 +56,16 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
             {analysis.candidateSummary || analysis.summary || "Not enough information was found in this resume to generate reliable career recommendations."}
           </p>
         </div>
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+        <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs text-slate-400">
           <span>PROFILE COMPLETENESS</span>
-          <span className="text-amber-400 font-bold font-mono">{analysis.profileCompleteness ?? 0}%</span>
+          <span className="text-amber-400 font-bold font-mono">
+            {analysis.profileCompleteness !== undefined && analysis.profileCompleteness !== null ? `${analysis.profileCompleteness}%` : '—'}
+          </span>
         </div>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition text-center"
+            className="btn-secondary w-full py-2 px-3 rounded-xl text-xs text-center"
           >
             <span>Upload Updated Resume</span>
           </button>
@@ -71,7 +74,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
     );
   }
 
-  const completeness = analysis.profileCompleteness ?? analysis.profileReadinessScore ?? 0;
+  const completeness = analysis.profileCompleteness ?? analysis.profileReadinessScore ?? null;
   const summaryText = analysis.candidateSummary || analysis.summary || '';
   
   const strongest = (analysis.strongestAreas && analysis.strongestAreas.length > 0)
@@ -91,11 +94,11 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
     if (typeof r === 'object' && r !== null) {
       return {
         role: r.role || 'Software Role',
-        fitScore: r.fitScore ?? (r.confidence ? Math.round(r.confidence * 100) : 85),
+        fitScore: typeof r.fitScore === 'number' ? r.fitScore : (typeof r.confidence === 'number' ? Math.round(r.confidence * 100) : null),
         whyFit: r.whyFit || ''
       };
     }
-    return { role: String(r), fitScore: 85, whyFit: '' };
+    return { role: String(r), fitScore: null, whyFit: '' };
   });
 
   const skillsList = analysis.technicalSkills || [];
@@ -103,12 +106,15 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
   const eduCount = analysis.education?.length ?? 0;
 
   return (
-    <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 text-slate-100 shadow-2xl space-y-4 font-sans">
+    <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-obsidian-900/90 backdrop-blur-xl border border-white/10 text-slate-100 shadow-2xl space-y-4 font-sans relative overflow-hidden">
+      {/* Glow highlight */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+      <div className="flex items-center justify-between pb-3 border-b border-white/10">
         <div className="flex items-center gap-2 text-indigo-400 font-mono text-[11px] font-bold uppercase tracking-wider">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>PROFILE ANALYZED</span>
+          <span>VERIFIED CANDIDATE PROFILE</span>
         </div>
       </div>
 
@@ -123,38 +129,40 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
       </div>
 
       {/* Profile Completeness */}
-      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between">
+      <div className="p-3 rounded-xl bg-obsidian-950/80 border border-white/10 flex items-center justify-between shadow-inner">
         <span className="text-[11px] font-mono font-bold uppercase text-slate-400">PROFILE COMPLETENESS</span>
-        <span className="text-base font-extrabold font-mono text-emerald-400">{completeness}%</span>
+        <span className="text-base font-extrabold font-mono text-emerald-400">
+          {completeness !== null ? `${completeness}%` : 'Not available'}
+        </span>
       </div>
 
       {/* Strongest Areas */}
       {strongest.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-[10px] font-mono uppercase font-bold text-indigo-300 tracking-wider">STRONGEST AREAS</span>
-          <ul className="space-y-1 text-xs text-slate-200">
+          <span className="text-[10px] font-mono uppercase font-bold text-indigo-400 tracking-wider flex items-center gap-1">
+            <Award className="w-3 h-3 text-indigo-400" /> STRONGEST EVIDENCE AREAS
+          </span>
+          <div className="flex flex-wrap gap-1.5">
             {strongest.map((area, idx) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="text-indigo-400">•</span>
-                <span>{area}</span>
-              </li>
+              <span key={idx} className="badge-indigo">
+                {area}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
       {/* Best-Fit Roles */}
       {targetRoles.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-[10px] font-mono uppercase font-bold text-indigo-300 tracking-wider">BEST-FIT ROLES</span>
-          <ul className="space-y-1 text-xs text-slate-200">
+          <span className="text-[10px] font-mono uppercase font-bold text-indigo-400 tracking-wider">TARGET ROLES</span>
+          <ul className="space-y-1.5 text-xs text-slate-200">
             {targetRoles.map((item, idx) => (
-              <li key={idx} className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 truncate max-w-[240px]">
-                  <span className="text-indigo-400">•</span>
-                  <span className="font-semibold text-white truncate">{item.role}</span>
-                </div>
-                <span className="text-emerald-400 font-mono font-bold text-[11px] shrink-0">— {item.fitScore}%</span>
+              <li key={idx} className="flex items-center justify-between p-2 rounded-lg bg-obsidian-950/50 border border-white/5">
+                <span className="font-semibold text-white truncate max-w-[240px]">{item.role}</span>
+                <span className="text-emerald-400 font-mono font-bold text-[11px] shrink-0">
+                  {item.fitScore !== null ? `${item.fitScore}%` : '—'}
+                </span>
               </li>
             ))}
           </ul>
@@ -163,24 +171,38 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
 
       {/* Skills */}
       <div className="space-y-1">
-        <span className="text-[10px] font-mono uppercase font-bold text-indigo-300 tracking-wider">SKILLS</span>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          {skillsList.length > 0 ? skillsList.join(' • ') : 'Not provided'}
-        </p>
+        <span className="text-[10px] font-mono uppercase font-bold text-indigo-400 tracking-wider">TECHNICAL SKILLS</span>
+        {skillsList.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1 pt-1">
+            {skillsList.map((sk: string, i: number) => (
+              <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-200 text-[11px]">
+                {sk}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">Not available</p>
+        )}
       </div>
 
-      {/* Experience & Education Counters (Strictly Dynamic) */}
+      {/* Experience & Education Counters */}
       <div className="grid grid-cols-2 gap-3 pt-1">
-        <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-0.5">
-          <span className="text-[10px] font-mono uppercase font-bold text-slate-400">EXPERIENCE</span>
-          <p className="text-xs font-semibold text-slate-100">
-            {expCount > 0 ? `${expCount} ${expCount === 1 ? 'position' : 'positions'}` : '0'}
+        <div className="p-3 rounded-xl bg-obsidian-950/70 border border-white/10 space-y-1">
+          <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-mono font-bold uppercase">
+            <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
+            <span>EXPERIENCE</span>
+          </div>
+          <p className="text-xs font-bold text-slate-100">
+            {expCount > 0 ? `${expCount} ${expCount === 1 ? 'role' : 'roles'}` : 'Not available'}
           </p>
         </div>
-        <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-0.5">
-          <span className="text-[10px] font-mono uppercase font-bold text-slate-400">EDUCATION</span>
-          <p className="text-xs font-semibold text-slate-100">
-            {eduCount > 0 ? `${eduCount} ${eduCount === 1 ? 'qualification' : 'qualifications'}` : '0'}
+        <div className="p-3 rounded-xl bg-obsidian-950/70 border border-white/10 space-y-1">
+          <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-mono font-bold uppercase">
+            <GraduationCap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>EDUCATION</span>
+          </div>
+          <p className="text-xs font-bold text-slate-100">
+            {eduCount > 0 ? `${eduCount} ${eduCount === 1 ? 'degree' : 'degrees'}` : 'Not available'}
           </p>
         </div>
       </div>
@@ -189,16 +211,16 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ analysis, onRetry 
       {development.length > 0 && (
         <div className="space-y-1.5 pt-1">
           <span className="text-[10px] font-mono uppercase font-bold text-amber-400 tracking-wider">DEVELOPMENT AREAS</span>
-          <ul className="space-y-1 text-xs text-slate-300">
+          <div className="flex flex-wrap gap-1.5">
             {development.map((dev, idx) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="text-amber-400">•</span>
-                <span>{dev}</span>
-              </li>
+              <span key={idx} className="badge-amber">
+                {dev}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
   );
 };
+

@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Upload, CheckCircle, AlertCircle, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Sparkles, ArrowRight, Loader2, FileText } from 'lucide-react';
 import { interviewApi } from '../api/interview';
 import { useInterviewStore } from '../store/interview.store';
 import { saveResumeToFirestore, uploadResumeToFirebaseStorage } from '../lib/firebase';
 import { saveCandidateProfile, getOrCreateSessionId } from '../services/firestore';
+import { formatErrorMessage } from '../lib/errorUtils';
 
 interface ResumeUploadCardProps {
   onProfileAnalyzed: (profile: any) => void;
@@ -14,6 +15,7 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
   const [isUploading, setIsUploading] = useState(false);
   const [stageMessage, setStageMessage] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { setCandidateProfile, clearCandidateProfile } = useInterviewStore();
@@ -28,10 +30,16 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(false);
     const dropped = e.dataTransfer.files?.[0];
     if (dropped) {
       setFile(dropped);
@@ -54,9 +62,9 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
     // Animated loading stages
     const stages = [
       'Extracting experience...',
-      'Identifying skills...',
-      'Understanding projects...',
-      'Building your candidate profile...'
+      'Identifying technical skills...',
+      'Analyzing domain evidence...',
+      'Building candidate profile...'
     ];
     let stageIdx = 0;
     const stageInterval = setInterval(() => {
@@ -118,14 +126,14 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
 
         onProfileAnalyzed(res);
       } else if (res && (res.errorMessage || res.summary === "Couldn't analyze resume")) {
-        setErrorMsg(res.errorMessage || "Couldn't analyze resume. Please retry uploading.");
+        setErrorMsg(formatErrorMessage(res.errorMessage, "Couldn't analyze resume. Please retry uploading."));
       } else {
         setErrorMsg('Resume analysis failed. Please try uploading the resume again.');
       }
     } catch (err: any) {
       clearInterval(stageInterval);
       console.error('[InterviewOS] Resume Analysis Failure:', err);
-      setErrorMsg(err?.message || 'Resume analysis failed. Please try uploading the resume again.');
+      setErrorMsg(formatErrorMessage(err, 'Resume analysis failed. Please try uploading your resume again.'));
     } finally {
       setIsUploading(false);
       setStageMessage('');
@@ -133,25 +141,28 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 shadow-2xl space-y-6 text-slate-100 font-sans">
-      <div className="text-center space-y-2">
-        <div className="inline-flex p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-1">
-          <Sparkles className="w-6 h-6 animate-pulse" />
+    <div className="w-full max-w-md mx-auto p-5 rounded-2xl bg-obsidian-900/90 backdrop-blur-xl border border-white/10 shadow-2xl space-y-5 text-slate-100 font-sans relative overflow-hidden">
+      <div className="text-center space-y-1.5">
+        <div className="inline-flex p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-0.5">
+          <Sparkles className="w-5 h-5 animate-pulse text-indigo-400" />
         </div>
-        <h2 className="text-xl font-bold font-display tracking-tight text-white">Upload Your Resume</h2>
+        <h2 className="text-lg font-bold font-display tracking-tight text-white">Upload Candidate Resume</h2>
         <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-          InterviewOS analyzes your resume skills, experience, and education to personalize every job match and technical interview.
+          InterviewOS extracts verified skills and experience to power job matching and AI interviews.
         </p>
       </div>
 
       <div
         onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+        className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-200 ${
           file
-            ? 'border-emerald-500/50 bg-emerald-950/10'
-            : 'border-slate-700 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-850/50'
+            ? 'border-emerald-500/50 bg-emerald-500/5'
+            : isDragOver
+            ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
+            : 'border-white/10 hover:border-indigo-500/50 bg-obsidian-950/60 hover:bg-obsidian-800/60'
         }`}
       >
         <input
@@ -163,38 +174,40 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
         />
 
         {file ? (
-          <div className="flex flex-col items-center space-y-2">
-            <CheckCircle className="w-10 h-10 text-emerald-400" />
-            <span className="text-sm font-semibold text-emerald-200 truncate max-w-[220px]">
+          <div className="flex flex-col items-center space-y-1.5">
+            <CheckCircle className="w-9 h-9 text-emerald-400" />
+            <span className="text-xs font-semibold text-emerald-200 truncate max-w-[240px]">
               {file.name}
             </span>
-            <span className="text-[10px] text-slate-400">
-              {(file.size / 1024).toFixed(1)} KB • Click to change file
+            <span className="text-[10px] text-slate-400 font-mono">
+              {(file.size / 1024).toFixed(1)} KB • Click to replace file
             </span>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-2">
-            <Upload className="w-10 h-10 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-            <span className="text-xs font-semibold text-slate-300">
-              Drop PDF, DOCX or TXT resume here
+            <div className="p-3 rounded-full bg-white/5 text-slate-400 group-hover:text-indigo-400 transition-colors">
+              <FileText className="w-6 h-6 text-indigo-400" />
+            </div>
+            <span className="text-xs font-semibold text-slate-200">
+              Drag & drop PDF, DOCX or TXT resume
             </span>
             <span className="text-[10px] text-slate-500">
-              or click to browse from your computer
+              or browse files from your computer
             </span>
           </div>
         )}
       </div>
 
       {stageMessage && (
-        <div className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-medium font-mono animate-pulse">
+        <div className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-medium font-mono animate-pulse">
           <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
           <span>{stageMessage}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs leading-relaxed">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs leading-relaxed">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -202,12 +215,12 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
       <button
         onClick={handleProcessResume}
         disabled={isUploading || !file}
-        className="w-full py-3 px-4 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn-primary w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isUploading ? (
           <>
             <Loader2 className="w-4 h-4 text-white animate-spin" />
-            <span>{stageMessage || 'Processing...'}</span>
+            <span>{stageMessage || 'Processing Resume...'}</span>
           </>
         ) : (
           <>
@@ -219,4 +232,5 @@ export const ResumeUploadCard: React.FC<ResumeUploadCardProps> = ({ onProfileAna
     </div>
   );
 };
+
 

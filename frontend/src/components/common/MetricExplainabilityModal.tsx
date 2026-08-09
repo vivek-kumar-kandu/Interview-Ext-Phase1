@@ -33,25 +33,23 @@ export const MetricExplainabilityModal: React.FC<MetricExplainabilityModalProps>
   const score = typeof metric?.score === 'number' ? metric.score : fallbackScore;
   const label = metric?.label || fallbackLabel || 'Fit Analysis';
 
-
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-obsidian-950/80 backdrop-blur-xl p-4 animate-in fade-in duration-200 select-none">
       <div
-        className="w-full max-w-lg bg-gradient-to-b from-[#161822] via-[#11131C] to-[#0B0C10] border border-indigo-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-100"
+        className="w-full max-w-lg bg-obsidian-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#232636] flex items-center justify-between bg-[#161822]/90">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-obsidian-900/90">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               <Info className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-white font-display">{title} Explainability</h3>
-                <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-500/30">
-                  ⓘ Derived Evidence
+                <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-500/20">
+                  Derived Evidence
                 </span>
               </div>
               <p className="text-xs text-slate-400">Verifiable backend calculation & signal weights</p>

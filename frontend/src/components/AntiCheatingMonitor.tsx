@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ShieldCheck, AlertTriangle, Maximize, Minimize, CheckCircle2 } from 'lucide-react';
 
 export interface IntegrityViolation {
   type: 'TAB_SWITCH' | 'FOCUS_LOSS' | 'FULLSCREEN_EXIT' | 'COPY_ATTEMPT' | 'PASTE_ATTEMPT' | 'DEVTOOLS_ATTEMPT';
@@ -123,33 +124,67 @@ export const AntiCheatingMonitor: React.FC<AntiCheatingMonitorProps> = ({ onViol
   if (!active) return null;
 
   return (
-    <div className="bg-slate-900/95 border border-slate-700/80 rounded-xl p-3 text-xs shadow-lg backdrop-blur-md">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
+    <div className="bg-obsidian-900/90 border border-white/10 rounded-2xl p-3.5 text-xs shadow-xl backdrop-blur-xl space-y-3 font-sans">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold text-slate-200">Interview integrity monitoring is active.</span>
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold text-slate-100 block text-xs">Interview Integrity Active</span>
+            <span className="text-[10px] text-slate-400">Session Security Monitoring</span>
+          </div>
         </div>
         <button
           onClick={toggleFullscreen}
-          className="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition"
+          className="btn-secondary py-1 px-2.5 text-[11px] flex items-center gap-1.5"
         >
-          {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          {isFullscreen ? (
+            <>
+              <Minimize className="w-3 h-3 text-indigo-400" />
+              <span>Exit Fullscreen</span>
+            </>
+          ) : (
+            <>
+              <Maximize className="w-3 h-3 text-indigo-400" />
+              <span>Enter Fullscreen</span>
+            </>
+          )}
         </button>
       </div>
 
+      {/* Monitor Status Badges */}
+      <div className="grid grid-cols-3 gap-2 text-[11px]">
+        <div className="p-2 rounded-xl bg-obsidian-950/70 border border-white/5 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-300 font-medium">Tab Focus</span>
+        </div>
+        <div className="p-2 rounded-xl bg-obsidian-950/70 border border-white/5 flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${isFullscreen ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          <span className="text-slate-300 font-medium">{isFullscreen ? 'Fullscreen' : 'Windowed'}</span>
+        </div>
+        <div className="p-2 rounded-xl bg-obsidian-950/70 border border-white/5 flex items-center gap-1.5">
+          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+          <span className="text-slate-300 font-medium">Environment</span>
+        </div>
+      </div>
+
       {warningMessage && (
-        <div className="mb-2 p-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded text-[11px] flex items-center gap-1.5 animate-fadeIn">
-          <span>⚠️</span>
+        <div className="p-2.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded-xl text-[11px] flex items-center gap-2 animate-fadeIn">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>{warningMessage}</span>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-slate-400 text-[11px]">
-        <span>Total Integrity Alerts: <strong className={violations.length > 0 ? 'text-amber-400' : 'text-emerald-400'}>{violations.length}</strong></span>
+      <div className="flex items-center justify-between text-slate-400 text-[11px] pt-0.5">
+        <span>Integrity Alerts: <strong className={violations.length > 0 ? 'text-amber-400' : 'text-emerald-400'}>{violations.length}</strong></span>
         {violations.length > 0 && (
-          <span className="text-[10px] text-slate-500">Latest: {violations[violations.length - 1].type} at {violations[violations.length - 1].timestamp}</span>
+          <span className="text-[10px] text-slate-400 font-mono">
+            Latest: {violations[violations.length - 1].type} ({violations[violations.length - 1].timestamp})
+          </span>
         )}
       </div>
     </div>
   );
 };
+

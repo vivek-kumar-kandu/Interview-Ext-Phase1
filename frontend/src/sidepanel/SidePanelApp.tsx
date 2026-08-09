@@ -2353,13 +2353,13 @@ export const SidePanelApp: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0C10] text-slate-100 font-sans flex flex-col antialiased">
+    <div className="min-h-screen bg-obsidian-950 text-slate-100 font-sans flex flex-col antialiased">
       {/* Top Header Bar */}
-      <header className="px-4 py-3 bg-[#161822] border-b border-[#232636] flex items-center justify-between sticky top-0 z-30 shadow-lg">
+      <header className="px-4 py-3 bg-obsidian-900/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between sticky top-0 z-30 shadow-2xl">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setExtensionView('profile_not_analyzed')}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1 text-xs font-semibold"
+            className="p-1.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 text-slate-300 hover:text-white border border-white/10 transition flex items-center gap-1 text-xs font-semibold"
             title="Back to Dashboard"
           >
             <ChevronLeft className="w-4 h-4 text-slate-300" />
@@ -2370,15 +2370,14 @@ export const SidePanelApp: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-sm font-display text-white tracking-tight">InterviewOS</span>
             </div>
-            <span className="text-[9px] text-slate-400 font-mono block">Enterprise AI Intelligence Platform</span>
+            <span className="text-[9px] text-indigo-400 font-mono block">Enterprise AI Intelligence</span>
           </div>
         </div>
-
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsProfileModalOpen(true)}
-            className="px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 hover:bg-indigo-500/30 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm"
+            className="px-2.5 py-1 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-200 hover:bg-indigo-500/20 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm"
             title="Switch or Add Candidate Profile"
           >
             <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
@@ -2386,25 +2385,25 @@ export const SidePanelApp: React.FC = () => {
           </button>
           <button
             onClick={() => handleScrapeActiveTab()}
-            className="px-2.5 py-1 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 hover:bg-indigo-600/50 text-[11px] font-semibold transition flex items-center gap-1 shadow-sm"
+            className="px-2.5 py-1 rounded-xl bg-indigo-600/20 border border-indigo-500/35 text-indigo-300 hover:bg-indigo-600/30 text-[11px] font-semibold transition flex items-center gap-1 shadow-sm"
             title="Scan active browser tab for job posting details"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-            <span>Detect Active Job</span>
+            <span>Detect Job</span>
           </button>
           <button
             onClick={() => handleScrapeActiveTab()}
-            className="px-2.5 py-1 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 text-[11px] font-semibold transition"
+            className="px-2.5 py-1 rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 text-[11px] font-semibold transition"
           >
             Restart
           </button>
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0B0C10] border border-[#232636] text-slate-300 text-[11px] font-mono">
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-obsidian-950 border border-white/10 text-slate-300 text-[11px] font-mono">
             <Clock className="w-3 h-3 text-indigo-400" />
             <span>{isDone ? 'Finished' : 'Live'}</span>
           </div>
           <button
             onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition"
           >
             {themeMode === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
@@ -2412,20 +2411,20 @@ export const SidePanelApp: React.FC = () => {
       </header>
 
       {/* Interview Anti-Cheating & Integrity Monitor Bar */}
-      <div className="px-4 pt-2 bg-[#0B0C10]">
+      <div className="px-4 pt-2 bg-obsidian-950">
         <AntiCheatingMonitor active={!isDone} />
       </div>
 
       {/* Main Body Layout: Responsive Navigation & Workspace */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Navigation Bar */}
-        <aside className="w-full md:w-52 bg-[#161822]/90 border-b md:border-b-0 md:border-r border-[#232636] p-3 flex flex-row md:flex-col justify-between shrink-0">
-          <div className="flex md:flex-col gap-1 w-full overflow-x-auto md:overflow-x-visible">
+        <aside className="w-full md:w-52 bg-obsidian-900/80 backdrop-blur-xl border-b md:border-b-0 md:border-r border-white/10 p-3 flex flex-row md:flex-col justify-between shrink-0">
+          <div className="flex md:flex-col gap-1.5 w-full overflow-x-auto md:overflow-x-visible">
             {/* OVERVIEW GROUP */}
             <button
               onClick={() => setNavKey('session')}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl transition whitespace-nowrap ${
-                navKey === 'session' ? 'bg-[#5B46F6] text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition whitespace-nowrap ${
+                navKey === 'session' ? 'btn-primary shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -2435,8 +2434,8 @@ export const SidePanelApp: React.FC = () => {
             {/* INTERVIEW GROUP */}
             <button
               onClick={() => setNavKey('chat')}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl transition whitespace-nowrap ${
-                navKey === 'chat' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition whitespace-nowrap ${
+                navKey === 'chat' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <ListOrdered className="w-4 h-4 text-cyan-400" />
@@ -2446,8 +2445,8 @@ export const SidePanelApp: React.FC = () => {
             {/* REPORTS GROUP */}
             <button
               onClick={() => setNavKey('reports')}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl transition whitespace-nowrap ${
-                navKey === 'reports' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition whitespace-nowrap ${
+                navKey === 'reports' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <FileBarChart className="w-4 h-4 text-emerald-400" />
@@ -2457,12 +2456,13 @@ export const SidePanelApp: React.FC = () => {
 
           <button
             onClick={() => setNavKey('settings')}
-            className="hidden md:flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 rounded-xl transition"
+            className="hidden md:flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition"
           >
             <Settings className="w-4 h-4" />
             <span>Settings</span>
           </button>
         </aside>
+
 
         {/* Center Workspace Content */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto space-y-5">

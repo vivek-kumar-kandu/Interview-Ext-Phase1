@@ -6,96 +6,115 @@
 
 @layer base {
   :root {
-    --bg-primary: #0b0c10;
-    --bg-card: #161822;
-    --border-color: #232636;
-    --brand-purple: #5b46f6;
+    --bg-primary: #08090e;
+    --bg-card: #0d0f17;
+    --bg-card-elevated: #131625;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(99, 102, 241, 0.35);
+    --brand-indigo: #6366f1;
+    --brand-violet: #8b5cf6;
+    --brand-cyan: #06b6d4;
   }
 
   html, body {
-    background-color: #0b0c10;
-    font-family: 'Inter', sans-serif;
+    background-color: #08090e;
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #f8fafc;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Target UI Cards & Surfaces */
+/* Target UI Cards & Glass Surfaces */
 .target-card {
-  background-color: #161822;
-  border: 1px solid #232636;
+  background-color: rgba(13, 15, 23, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
 }
 
 .target-card-interactive {
-  background-color: #161822;
-  border: 1px solid #232636;
+  background-color: rgba(13, 15, 23, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .target-card-interactive:hover {
-  border-color: rgba(91, 70, 246, 0.5);
-  background-color: #1c1f2e;
+  border-color: rgba(99, 102, 241, 0.4);
+  background-color: rgba(19, 22, 37, 0.9);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4), 0 0 16px rgba(99, 102, 241, 0.15);
 }
 
 .target-btn-primary {
-  background: linear-gradient(135deg, #5b46f6 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: #ffffff;
   font-weight: 600;
   border-radius: 12px;
   padding: 10px 20px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(91, 70, 246, 0.3);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
 }
 
 .target-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(91, 70, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
 }
 
 .target-badge-completed {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.12);
   color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 2px 10px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .target-badge-inprogress {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(245, 158, 11, 0.25);
   padding: 2px 10px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .target-badge-purple {
-  background: rgba(91, 70, 246, 0.15);
-  color: #a78bfa;
-  border: 1px solid rgba(91, 70, 246, 0.3);
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.25);
   padding: 2px 10px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0c10;
+  background: rgba(8, 9, 14, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: #232636;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #5b46f6;
+  background: rgba(99, 102, 241, 0.6);
 }
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

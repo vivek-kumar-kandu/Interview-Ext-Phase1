@@ -3,8 +3,9 @@ import { ResumeUploadCard } from '../components/ResumeUploadCard';
 import { CandidateProfileAnalysis } from '../types/profile';
 import { getCandidateProfile } from '../services/firestore';
 import { safeOpenSidePanel } from '../core/chrome';
-import { Sparkles, Briefcase, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Sparkles, Briefcase, AlertCircle, CheckCircle, ArrowRight, UserCheck, RefreshCw } from 'lucide-react';
 import { interviewApi } from '../api/interview';
+import { formatErrorMessage } from '../lib/errorUtils';
 
 export const PopupApp: React.FC = () => {
   const [profileData, setProfileData] = useState<CandidateProfileAnalysis | null>(null);
@@ -60,6 +61,7 @@ export const PopupApp: React.FC = () => {
               }
             } catch (err: any) {
               console.error('Job match computation error:', err);
+              setErrorMessage(formatErrorMessage(err, 'Could not compute job match score.'));
             }
           }
         });
@@ -70,16 +72,31 @@ export const PopupApp: React.FC = () => {
   // STATE 1: No Candidate Profile Uploaded
   if (!profileData) {
     return (
-      <div className="w-[380px] min-h-[480px] p-6 bg-[#0B0C10] text-slate-100 font-sans border border-[#232636] rounded-2xl flex flex-col justify-between select-none">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-            <h1 className="text-lg font-bold text-white tracking-tight">InterviewOS</h1>
+      <div className="w-[380px] min-h-[480px] p-5 bg-obsidian-950 text-slate-100 font-sans border border-white/10 rounded-2xl flex flex-col justify-between select-none shadow-2xl relative overflow-hidden">
+        {/* Ambient Glow background */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="space-y-4 relative z-10">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-white tracking-tight leading-tight">InterviewOS</h1>
+                <p className="text-[10px] text-indigo-400 font-medium">AI Recruitment Intelligence</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Ready
+            </div>
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -92,8 +109,8 @@ export const PopupApp: React.FC = () => {
           />
         </div>
 
-        <p className="text-[11px] text-center text-slate-500 font-mono mt-4">
-          Your resume will be analyzed by AI. No fake data.
+        <p className="text-[10px] text-center text-slate-500 font-mono mt-4 relative z-10">
+          Powered by Gemini AI Intelligence
         </p>
       </div>
     );
@@ -103,21 +120,33 @@ export const PopupApp: React.FC = () => {
   const experienceCount = profileData.experience?.length || 0;
   const educationCount = profileData.education?.length || 0;
   const isProfileIncomplete = profileData.analysisStatus === 'incomplete_evidence' || (skillsCount === 0 && experienceCount === 0 && educationCount === 0);
+  const profileCompletenessScore = typeof profileData.profileCompleteness === 'number'
+    ? profileData.profileCompleteness
+    : (typeof profileData.profileReadinessScore === 'number' ? profileData.profileReadinessScore : null);
 
   // STATE 4: Job Detected on Active Tab
   if (activeJob) {
-    const matchedSkills = jobMatch?.matchScore?.matchedSkills || [];
-    const missingSkills = jobMatch?.matchScore?.missingSkills || jobMatch?.skillGaps?.filter((g: any) => g.status === 'missing')?.map((g: any) => g.skill) || [];
+    const matchedSkills = jobMatch?.matchScore?.matchedSkills || jobMatch?.matchedSkills || [];
+    const missingSkills = jobMatch?.matchScore?.missingSkills || jobMatch?.missingSkills || jobMatch?.skillGaps?.filter((g: any) => g.status === 'missing')?.map((g: any) => g.skill) || [];
     const matchScore = typeof jobMatch?.matchScore?.score === 'number' ? jobMatch.matchScore.score : (typeof jobMatch?.match?.overall === 'number' ? jobMatch.match.overall : null);
 
-
     return (
-      <div className="w-[380px] min-h-[520px] p-5 bg-[#0B0C10] text-slate-100 font-sans border border-[#232636] rounded-2xl flex flex-col justify-between select-none">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-400" />
-              <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
+      <div className="w-[380px] min-h-[520px] p-5 bg-obsidian-950 text-slate-100 font-sans border border-white/10 rounded-2xl flex flex-col justify-between select-none shadow-2xl relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute -top-20 -right-20 w-44 h-44 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="space-y-4 relative z-10">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
+                <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Job Detected
+                </p>
+              </div>
             </div>
             <button
               onClick={() => {
@@ -127,29 +156,33 @@ export const PopupApp: React.FC = () => {
                 setProfileData(null);
                 setActiveJob(null);
               }}
-              className="text-[11px] text-slate-500 hover:text-slate-300 underline"
+              className="text-[11px] text-slate-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
             >
-              Change Resume
+              <RefreshCw className="w-3 h-3" /> Change Resume
             </button>
           </div>
 
-          <div className="space-y-1">
-            <h2 className="text-base font-bold text-white leading-tight">{activeJob.jobTitle}</h2>
-            <p className="text-xs text-indigo-400 font-medium">{activeJob.company}</p>
+          <div className="p-3.5 rounded-xl bg-obsidian-900/80 border border-white/10 space-y-1">
+            <h2 className="text-sm font-bold text-white leading-tight line-clamp-1">{activeJob.jobTitle}</h2>
+            <p className="text-xs text-indigo-400 font-medium line-clamp-1">{activeJob.company}</p>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-            <div className="text-2xl font-extrabold text-emerald-400">{matchScore}% Match</div>
-            <p className="text-[11px] text-slate-400">Based on your candidate profile evidence</p>
+          <div className="p-4 rounded-xl bg-gradient-to-br from-obsidian-900 via-obsidian-800 to-indigo-950/40 border border-white/10 text-center space-y-1 shadow-inner">
+            <div className="text-3xl font-extrabold text-emerald-400 tracking-tight">
+              {matchScore !== null ? `${matchScore}% Match` : '—'}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {matchScore !== null ? 'Based on verified resume evidence' : 'Match score calculation pending'}
+            </p>
           </div>
 
           <div className="space-y-3 text-xs">
             {matchedSkills.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold text-emerald-400">Verified Matching Skills:</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                   {matchedSkills.map((sk: string) => (
-                    <span key={sk} className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] flex items-center gap-1">
+                    <span key={sk} className="badge-emerald">
                       <CheckCircle className="w-3 h-3 text-emerald-400" />
                       {sk}
                     </span>
@@ -159,11 +192,11 @@ export const PopupApp: React.FC = () => {
             )}
 
             {missingSkills.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold text-amber-400">Missing Requirements:</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                   {missingSkills.map((sk: string) => (
-                    <span key={sk} className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1">
+                    <span key={sk} className="badge-amber">
                       • {sk}
                     </span>
                   ))}
@@ -175,7 +208,7 @@ export const PopupApp: React.FC = () => {
 
         <button
           onClick={() => safeOpenSidePanel()}
-          className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 mt-4"
+          className="btn-primary w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 mt-4 relative z-10"
         >
           <span>Start Technical Interview</span>
           <ArrowRight className="w-4 h-4" />
@@ -184,14 +217,22 @@ export const PopupApp: React.FC = () => {
     );
   }
 
-  // STATE 2 / STATE 3: Resume analyzed (Job page or Non-job page)
+  // STATE 2 / STATE 3: Resume analyzed (Non-job page or default)
   return (
-    <div className="w-[380px] min-h-[500px] p-5 bg-[#0B0C10] text-slate-100 font-sans border border-[#232636] rounded-2xl flex flex-col justify-between select-none">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-            <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
+    <div className="w-[380px] min-h-[500px] p-5 bg-obsidian-950 text-slate-100 font-sans border border-white/10 rounded-2xl flex flex-col justify-between select-none shadow-2xl relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute -top-20 -right-20 w-44 h-44 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="space-y-4 relative z-10">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white tracking-tight">InterviewOS</h1>
+              <p className="text-[10px] text-indigo-400 font-medium">Candidate Active</p>
+            </div>
           </div>
           <button
             onClick={() => {
@@ -200,55 +241,59 @@ export const PopupApp: React.FC = () => {
               }
               setProfileData(null);
             }}
-            className="text-[11px] text-slate-500 hover:text-slate-300 underline"
+            className="text-[11px] text-slate-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
           >
-            Change Resume
+            <RefreshCw className="w-3 h-3" /> Change Resume
           </button>
         </div>
 
         {isProfileIncomplete ? (
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
             <div className="flex items-center gap-2 text-amber-300 text-xs font-bold">
-              <AlertCircle className="w-4 h-4" />
-              <span>Limited profile data (18% Completeness)</span>
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+              <span>
+                Limited Profile Evidence {profileCompletenessScore !== null ? `(${profileCompletenessScore}%)` : '—'}
+              </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Skills</p>
-                <p className="font-bold text-amber-400">0 detected</p>
+                <p className="font-bold text-amber-400">{skillsCount}</p>
               </div>
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Experience</p>
-                <p className="font-bold text-amber-400">0 detected</p>
+                <p className="font-bold text-amber-400">{experienceCount}</p>
               </div>
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Education</p>
-                <p className="font-bold text-amber-400">0 detected</p>
+                <p className="font-bold text-amber-400">{educationCount}</p>
               </div>
             </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed pt-1">
-              Not enough information was found in this resume to generate reliable career recommendations.
+            <p className="text-[11px] text-slate-300 leading-relaxed pt-0.5">
+              Not enough information was found in this resume to generate complete candidate metrics.
             </p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                <CheckCircle className="w-4 h-4" />
-                <span>Profile Ready</span>
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                <span>Profile Verified</span>
               </div>
-              <span className="text-xs font-bold text-emerald-300">{profileData.candidateName}</span>
+              <span className="text-xs font-bold text-emerald-300 truncate max-w-[150px]">
+                {profileData.candidateName || 'Candidate'}
+              </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Skills</p>
                 <p className="font-bold text-emerald-400">{skillsCount}</p>
               </div>
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Experience</p>
                 <p className="font-bold text-emerald-400">{experienceCount}</p>
               </div>
-              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="p-2 rounded-lg bg-obsidian-900/80 border border-white/5">
                 <p className="text-[10px] text-slate-400">Education</p>
                 <p className="font-bold text-emerald-400">{educationCount}</p>
               </div>
@@ -256,17 +301,17 @@ export const PopupApp: React.FC = () => {
           </div>
         )}
 
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
-          <Briefcase className="w-6 h-6 text-indigo-400 mx-auto" />
-          <p className="text-xs font-medium text-slate-200">
-            Open any job posting to analyze your profile match and start a technical interview.
+        <div className="p-4 rounded-xl bg-obsidian-900/80 border border-white/10 text-center space-y-2">
+          <Briefcase className="w-5 h-5 text-indigo-400 mx-auto" />
+          <p className="text-xs font-medium text-slate-200 leading-relaxed">
+            Open any job posting on LinkedIn or Indeed to analyze match score and launch AI interview.
           </p>
         </div>
       </div>
 
       <button
         onClick={() => safeOpenSidePanel()}
-        className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-2 mt-4"
+        className="btn-secondary w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 mt-4 relative z-10"
       >
         <span>Open Sidepanel Workspace</span>
         <ArrowRight className="w-4 h-4" />
@@ -274,3 +319,4 @@ export const PopupApp: React.FC = () => {
     </div>
   );
 };
+
